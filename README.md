@@ -14,10 +14,12 @@ sync.
 | Skill | What it's for |
 |---|---|
 | [`spexd-authoring`](skills/spexd-authoring/SKILL.md) | **Building the spec.** Author and curate the whole traceability chain — features, requirements, acceptance criteria, designs, and tasks — placing each entity at the right altitude so implementation detail never leaks upward into a feature or requirement. Use it to populate Spexd, reorganise entities, or import work from tickets, docs, and code. |
+| [`spexd-importing`](skills/spexd-importing/SKILL.md) | **Bootstrapping the spec from an existing project.** Reverse-engineer a whole Spexd project from a codebase and its supporting sources: discover the feature set from evidence, fan out one sub-agent per feature to derive requirements and acceptance criteria, then design across the requirements — all raised as `DRAFT` for human review. Discovery-first and evidence-grounded, building on `spexd-authoring` for altitude. |
 | [`spexd-implementing`](skills/spexd-implementing/SKILL.md) | **Executing the spec.** Pull a task and its full ancestor chain (task → design → acceptance criteria → requirement → feature) as context, build to that spec without changing it, and reflect progress back onto the task's lifecycle status. Use it to pick up, build, or ship work that's tracked in Spexd. |
 
-The two are complements: `spexd-authoring` decides *what* to build and *how*;
-`spexd-implementing` carries out a decision that has already been made. Both
+The three are complements: `spexd-importing` bootstraps a spec from a project
+that already exists; `spexd-authoring` decides *what* to build and *how*; and
+`spexd-implementing` carries out a decision that has already been made. All
 operate over the Spexd MCP tools (`mcp__Spexd__*`).
 
 ## Requirements
@@ -41,6 +43,7 @@ npx skills add spexd-team/agent-skills --list
 
 # Or install a single skill
 npx skills add spexd-team/agent-skills --skill spexd-authoring
+npx skills add spexd-team/agent-skills --skill spexd-importing
 npx skills add spexd-team/agent-skills --skill spexd-implementing
 ```
 
