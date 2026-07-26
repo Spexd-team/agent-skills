@@ -218,6 +218,22 @@ trade-offs and alternatives considered; diagram the architecture; include the
 contracts and the key code where they clarify; call out failure modes and how
 they're handled. Cite relevant ADRs and source tickets.
 
+**Keep out — two things that creep into designs and don't belong.**
+
+- **Delivery or build status.** A design describes the intended
+  architecture, not how far it has been built. No "not built", "shipped",
+  "in progress", "landed in wave N", no "Status:" note, and no references to
+  what `main` currently does or doesn't do — the entity's Spexd lifecycle
+  status carries all of that. Write the mechanism in the timeless present, as
+  the design to build to, so it reads the same whether the work is unstarted
+  or long shipped.
+- **Source-code files in the sources line.** Cite sources as the documents,
+  ADRs, tickets, and links a reader navigates to for intent and decisions —
+  not a list of implementation files (`server/…/foo.ts`). A file path is an
+  implementation pointer that goes stale, not a source of the design. (Naming
+  a specific file *inside the body* to pin a mechanism is fine — the
+  prohibition is on the sources line.)
+
 ---
 
 ## Task
@@ -263,12 +279,12 @@ architecture that isn't already in the design.
   remember requirement/AC/design/task numbering is **feature-scoped**: REQ-1
   exists under many features, so always qualify a reference with its feature.
 - **For features and requirements**, a useful body shape is: `## Overview`
-  (one or two sentences, product language) → behaviour/scope in product terms
-  → `## Design (out of scope here)` (one short paragraph pointing at
-  ADRs/tickets for the mechanics, so the "how" has a home to point to without
-  landing in the body). ACs are usually a single Given/When/Then line;
-  designs are full technical documents; tasks are a definition of done plus a
-  subtask checklist.
+  (one or two sentences, product language) → behaviour/scope in product terms.
+  Keep the mechanism out entirely rather than giving it a section — the "how"
+  belongs in the Design entities the chain links automatically, not in a
+  footnote on the feature or requirement. ACs are usually a single
+  Given/When/Then line; designs are full technical documents; tasks are a
+  definition of done plus a subtask checklist.
 
 ## Operational notes (MCP surface)
 
@@ -282,13 +298,15 @@ architecture that isn't already in the design.
   changes. A stale handle (the matched text changed under you) is rejected
   — re-run `searchDocument` and retry.
 - **Publishing is a separate, content-less step.** When the edits are
-  complete, `publish*` flushes the entity's current shared draft to a new
-  immutable version. It takes `baseVersion` (the published head from
-  `readDocument`); a stale base returns 409 — your draft edits stay in
-  place, so re-read and publish again. Don't publish after every micro-edit:
-  finish a coherent set of changes, then publish once.
-- **Renaming**: pass the optional `title` on any `publish*` call to rename
-  an entity alongside publishing.
+  complete, `publishDocument` (one generic tool for every kind — addressed by
+  `kind` + `featureRef?` + `reference`, like `readDocument`) flushes the
+  entity's current shared draft to a new immutable version. It takes
+  `baseVersion` (the published head from `readDocument`); a stale base returns
+  409 — your draft edits stay in place, so re-read and publish again. Don't
+  publish after every micro-edit: finish a coherent set of changes, then
+  publish once.
+- **Renaming**: pass the optional `title` on the `publishDocument` call to
+  rename an entity alongside publishing.
 - **Status transitions**: `transition*Status` tools move entities through
   the lifecycle (e.g. `DRAFT → CANCELLED`, `DRAFT → READY_FOR_REVIEW`).
   Only legal manual transitions are accepted; illegal moves and
@@ -303,7 +321,7 @@ architecture that isn't already in the design.
      cross-references in other entities).
   2. Edit the retiring entity's draft down to its final content (e.g. a
      short pointer to where the content moved) via the document tools, then
-     publish it — with the final `title` on that `publish*` call.
+     publish it — with the final `title` on that `publishDocument` call.
   3. Transition it to `CANCELLED`.
   Cancelling before step 2 makes those edits permanently impossible.
 - References are server-generated; never invent or assume the next number —
@@ -316,10 +334,10 @@ architecture that isn't already in the design.
    altitude lens above before the first create call. When a source mixes
    levels (a ticket that states a capability *and* how it's built), split it:
    the capability goes up the chain, the mechanism waits for Design.
-2. **Check for an existing home** (`listFeatures`,
-   `listRequirementsForFeature`, `listAcceptanceCriteriaForRequirement`,
-   `listDesignsForAcceptanceCriteria`, `listTasksForDesign`) before creating,
-   to avoid duplicates.
+2. **Check for an existing home** (`listFeatures`, then `listChildren` —
+   which lists any entity's direct children by `kind` + `reference`: a
+   feature's requirements, a requirement's acceptance criteria, an acceptance
+   criterion's designs, a design's tasks) before creating, to avoid duplicates.
 3. **Create top-down.** Feature first, then its requirements
    (`createRequirement` needs the `featureRef` from the create response),
    then acceptance criteria under each requirement, then designs against the
@@ -331,7 +349,7 @@ architecture that isn't already in the design.
    (`searchDocument` → `deleteContent`) and publish the parent. Spexd links
    the child to its parent automatically, so there's no need to list or
    point to it from the parent body.
-5. **Verify at the end.** Walk the chain (`listFeatures` →
-   `listRequirementsForFeature` → …) and confirm the created set matches the
+5. **Verify at the end.** Walk the chain (`listFeatures` → `listChildren`
+   at each level down) and confirm the created set matches the
    plan and that no implementation detail leaked above Design; report
    references created and anything cancelled.

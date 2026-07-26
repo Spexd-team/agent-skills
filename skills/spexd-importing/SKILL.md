@@ -122,8 +122,8 @@ for altitude; and the two rules above. A prompt template:
 > each one in what you observe; don't invent capabilities the code doesn't
 > show. For each, `createRequirement` under `<featureRef>` with a product-level
 > body and a `**Sources:**` line. Keep mechanism out (no vendors, tables,
-> algorithms, or code — those wait for Design). Check
-> `listRequirementsForFeature` first to avoid duplicates.
+> algorithms, or code — those wait for Design). Check `listChildren`
+> (`kind: "feature"`) first to avoid duplicates.
 >
 > **Step B — Acceptance criteria.** For each requirement you created, write the
 > acceptance criteria that would prove it — atomic Given/When/Then scenarios,
@@ -165,8 +165,8 @@ not one-per-requirement.
    the gap rather than fabricating a mechanism.
 3. **Link designs to the ACs they fulfil** across every feature, so each
    requirement's acceptance criteria are covered by at least one design. Use the
-   `getOutstandingWorkForFeature` / `listDesignsForAcceptanceCriteria` views to
-   confirm no AC is left without a design. (Tasks are out of scope for an import
+   `getOutstandingWorkForFeature` / `listChildren` (`kind: "acceptanceCriteria"`)
+   views to confirm no AC is left without a design. (Tasks are out of scope for an import
    — leave decomposition to `spexd-authoring`/`spexd-implementing` once humans
    have reviewed.)
 
@@ -192,7 +192,7 @@ consistent.
 - **MCP surface** (see `spexd-authoring` for the full editing/publishing model):
   entities are created with `create*`, edited via the anchored document tools
   (`readDocument` → `searchDocument` → `insert`/`replace`/`deleteContent`), and
-  flushed with a separate content-less `publish*`. References are
+  flushed with a separate content-less `publishDocument`. References are
   server-generated and **feature-scoped** for child kinds — read them from the
   create response, never invent them, and always qualify a child reference with
   its feature.
@@ -211,8 +211,8 @@ consistent.
 5. **Design** across the requirements along architectural seams, grounded in the
    real codebase; link each design to the ACs it fulfils; confirm every AC is
    covered.
-6. **Verify** the chain (`listProjectFeatures` → `listRequirementsForFeature` →
-   `listAcceptanceCriteriaForRequirement` → `listDesignsForAcceptanceCriteria`):
+6. **Verify** the chain (`listProjectFeatures`, then `listChildren` at each level
+   down — feature → requirement → acceptance criterion → design):
    every entity is `DRAFT`, nothing was transitioned, no implementation detail
    leaked above Design, and nothing was invented beyond the AC exception. Report
    the project and references created for human review.
