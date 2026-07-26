@@ -46,31 +46,33 @@ context above the task is what makes the implementation correct.
 
 ### 1. Find the work
 
-- **Given a task reference**, read it directly: `getTask` (published version) and
-  `readDocument` (the LIVE draft — it may be ahead of the published version, and
-  it also returns the current lifecycle `status` and published head `version`).
+- **Given a task reference**, read it directly: `getTasks` (published version;
+  pass one reference or several) and `readDocument` (the LIVE draft — it may be
+  ahead of the published version, and it also returns the current lifecycle
+  `status` and published head `version`).
 - **Given a feature/requirement/design and asked for "what's next"**, use the
   outstanding-work tools — `getOutstandingWorkForFeature`,
   `getOutstandingWorkForRequirement`, `getOutstandingWorkForDesign` — to list the
-  descendants whose status needs action, then `listTasksForDesign` to enumerate a
-  design's tasks. Pick a task that is ready to build (see status rules below).
+  descendants whose status needs action, then `listChildren` (`kind: "design"`)
+  to enumerate a design's tasks. Pick a task that is ready to build (see status
+  rules below).
 
 ### 2. Gather the context — walk UP the chain
 
 A task on its own is only a definition-of-done. Its *meaning* lives above it.
 Before writing code, read the whole ancestor chain so you build the right thing:
 
-- **Design** (`getDesign` / `readDocument`) — the parent. This is where the
+- **Design** (`getDesigns` / `readDocument`) — the parent. This is where the
   architecture, data model, contracts, algorithms and trade-offs are. **This is
   your primary spec.** A design may fulfil several acceptance criteria; note them.
-- **Acceptance criteria** (`getAcceptanceCriteria`, or `batchGetAcceptanceCriteria`
-  for several) — the testable conditions your implementation must satisfy. These
+- **Acceptance criteria** (`getAcceptanceCriteria` — pass one reference or the
+  whole set) — the testable conditions your implementation must satisfy. These
   are your acceptance tests in prose: your code is done when every one passes.
-- **Requirement** (`getRequirement`) — the behavioural rule the ACs prove.
-- **Feature** (`getFeature`) — the product capability and why it matters; the
+- **Requirement** (`getRequirements`) — the behavioural rule the ACs prove.
+- **Feature** (`getFeatures`) — the product capability and why it matters; the
   scope boundaries that tell you what *not* to build.
 
-Use the `batchGet*` tools to pull several siblings at once, and `readDocument`
+Use the `get{Entity}` tools to pull one or several siblings at once, and `readDocument`
 whenever you need the live draft rather than the last published version. Read
 enough of the chain that you could explain *why* the task exists and *how* it's
 meant to work before touching code.
@@ -112,15 +114,16 @@ server-side; don't try to route around it).
 
 ## Operational notes (MCP surface)
 
-- **Reads**: `get*` returns the last published version; `readDocument` returns the
-  LIVE collaborative draft plus the current `status` and published head `version`.
-  Prefer `readDocument` when you need the freshest content or the status.
-- **`batchGet*`** pulls several entities of one kind at once (scoped to a feature
-  for child kinds) — use it to gather an AC set or a design's siblings in one call.
+- **Reads**: `get{Entity}` returns the last published version; `readDocument`
+  returns the LIVE collaborative draft plus the current `status` and published head
+  `version`. Prefer `readDocument` when you need the freshest content or the status.
+- **`get{Entity}`** takes one or more references and pulls those entities of one
+  kind at once (scoped to a feature for child kinds) — pass a single reference to
+  read one, or a set to gather an AC set or a design's siblings in one call.
 - **You generally don't author while implementing.** If you must correct the spec,
   edits are anchored, not whole-document: `readDocument` → `searchDocument` →
   `insertContent` / `replaceContent` / `deleteContent`, then a separate content-less
-  `publish*` with the `baseVersion` from `readDocument` (a stale `baseVersion` is
+  `publishDocument` with the `baseVersion` from `readDocument` (a stale `baseVersion` is
   rejected with a conflict — re-read and retry). See `spexd-authoring` for the full
   authoring workflow.
 - **References are feature-scoped** for child kinds: `DES-1` exists under many
