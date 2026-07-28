@@ -82,7 +82,8 @@ is a requirement/AC statement; "polls an H3 index every 5 seconds" is design.
 | Definition-of-done checklist | | | | | ✓ |
 
 Each entity may **reference** the level above ("see FEAT-2", "satisfies
-AC-3"); none may pre-empt the level below. A requirement that already names
+AC-3" — always as a link to the entity, see *Content conventions*); none may
+pre-empt the level below. A requirement that already names
 the algorithm has done Design's job for it — and usually the wrong way.
 
 ---
@@ -249,8 +250,8 @@ in the task.
 
 **How to write a good one.** An imperative title ("Implement `POST
 /api/rides`"), a clear **definition of done**, and a subtask checklist. Point
-back to the design it implements ("per the *Ride request creation & state
-machine* design"). Code snippets are fine here — a task executes design-level
+back to the design it implements, as a link ("per [DES-9](…) — *Ride request
+creation & state machine*"). Code snippets are fine here — a task executes design-level
 decisions, so it inherits their implementation altitude.
 
 **Keep out.** Don't re-argue the design; reference it. Don't introduce
@@ -275,9 +276,27 @@ architecture that isn't already in the design.
   ```markdown
   **Sources:** <Linear ticket(s)>, <ADR(s)>
   ```
-- **Cross-reference by reference** ("see FEAT-17", "satisfies AC-3"), and
-  remember requirement/AC/design/task numbering is **feature-scoped**: REQ-1
-  exists under many features, so always qualify a reference with its feature.
+- **Always link a cross-reference, never leave it bare.** Whenever you name
+  another entity — in an entity's body, in a comment, or in what you report
+  back to the user — write it as a markdown link to that entity's `viewUrl`,
+  not as plain text:
+
+  ```markdown
+  satisfies [AC-3](https://www.spexd.com/feature/FEAT-17/REQ-4/AC-3)
+  ```
+
+  `get{Entity}`, `listFeatures`, `listChildren` and `searchEntities` all
+  return `viewUrl` alongside the reference — take the URL from the response
+  rather than composing one yourself, and if you don't have it, read the
+  entity rather than guessing. Two tools don't return it: `readDocument` (keep
+  the link from whichever tool surfaced the entity) and the outstanding-work
+  tools, which return a `path` array that *is* the URL —
+  `https://www.spexd.com/feature/` + the segments joined with `/`.
+
+  A bare `AC-3` makes the reader go and find it, and is ambiguous besides,
+  because requirement/AC/design/task numbering is **feature-scoped**: REQ-1
+  exists under many features. The link carries the feature in its path, which
+  is exactly the qualification a bare reference is missing.
 - **For features and requirements**, a useful body shape is: `## Overview`
   (one or two sentences, product language) → behaviour/scope in product terms.
   Keep the mechanism out entirely rather than giving it a section — the "how"
@@ -351,5 +370,6 @@ architecture that isn't already in the design.
    point to it from the parent body.
 5. **Verify at the end.** Walk the chain (`listFeatures` → `listChildren`
    at each level down) and confirm the created set matches the
-   plan and that no implementation detail leaked above Design; report
-   references created and anything cancelled.
+   plan and that no implementation detail leaked above Design; report what was
+   created and anything cancelled — each as a **link** (`viewUrl`) on its
+   reference, with its title, never a bare list of references.

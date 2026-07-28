@@ -3,7 +3,8 @@ name: spexd-implementing
 description: >-
   Implement software tasks using Spexd as the source of context — pull a task
   and its full traceability chain (task → design → acceptance criteria →
-  requirement → feature) via the Spexd MCP tools (mcp__Spexd__*), build to that
+  requirement → feature) via the Spexd MCP tools (mcp__Spexd__*), open by
+  reporting the entity's link, title and a concise summary, build to that
   spec, and reflect progress back onto the task's lifecycle status. Use when
   asked to pick up, build, or ship work that is tracked in Spexd, or to turn a
   Spexd task into code. The complement of spexd-authoring: authoring writes the
@@ -40,9 +41,9 @@ feature, split a requirement, draft acceptance criteria — that's
 
 ## The loop
 
-Implementing a task is four steps: **find the work → gather the context →
-build → reflect status.** Never skip straight from "find" to "build" — the
-context above the task is what makes the implementation correct.
+Implementing a task is five steps: **find the work → orient → gather the
+context → build → reflect status.** Never skip straight from "find" to
+"build" — the context above the task is what makes the implementation correct.
 
 ### 1. Find the work
 
@@ -57,7 +58,45 @@ context above the task is what makes the implementation correct.
   to enumerate a design's tasks. Pick a task that is ready to build (see status
   rules below).
 
-### 2. Gather the context — walk UP the chain
+### 2. Orient — open with the entity, not with the work
+
+Whenever you're asked to pick up, work on, or look at a Spexd entity — a task,
+but equally a feature, requirement, AC or design — the **first thing you say
+back** is what that entity actually is. Before any plan, any file reads, any
+code, lead with:
+
+1. **A link to the entity** — the `viewUrl` from the tool response, as a
+   markdown link on the reference, e.g.
+   `[TASK-12](https://www.spexd.com/feature/FEAT-3/REQ-7/DES-9/TASK-12)`.
+2. **Its title**, verbatim.
+3. **A concise summary** — two or three sentences on what it covers and what
+   "done" means, in your own words rather than a paste of the body.
+
+```markdown
+**[TASK-12](https://www.spexd.com/feature/FEAT-3/REQ-7/DES-9/TASK-12) — Implement `POST /api/rides`**
+
+Creates the ride-request endpoint and its state machine transitions per
+[DES-9](https://www.spexd.com/feature/FEAT-3/REQ-7/DES-9), validating rider
+location and payment method before persisting. Done when the endpoint accepts
+a valid request, rejects the three failure cases in AC-4/AC-5, and the state
+machine is covered by tests.
+```
+
+`viewUrl` comes back from `get{Entity}`, `listFeatures`, `listChildren` and
+`searchEntities` — take it from the response rather than composing a URL
+yourself. Two tools don't return one: `readDocument` (so keep the link from
+whichever tool surfaced the entity), and the outstanding-work tools, which
+return a `path` array instead — that path *is* the URL,
+`https://www.spexd.com/feature/` + the path segments joined with `/`
+(`["FEAT-15","REQ-64","DES-252"]` →
+`https://www.spexd.com/feature/FEAT-15/REQ-64/DES-252`). If the ask spans
+several entities — "what's outstanding on FEAT-6" — give the same
+link + title + one-line summary for each, then say which one you're picking up.
+
+Do this even when you're about to start work immediately: it's what lets a
+human confirm you're on the right thing before you spend effort on it.
+
+### 3. Gather the context — walk UP the chain
 
 A task on its own is only a definition-of-done. Its *meaning* lives above it.
 Before writing code, read the whole ancestor chain so you build the right thing:
@@ -77,7 +116,7 @@ whenever you need the live draft rather than the last published version. Read
 enough of the chain that you could explain *why* the task exists and *how* it's
 meant to work before touching code.
 
-### 3. Build
+### 4. Build
 
 - Implement to the **design's** mechanism and the **task's** definition-of-done
   checklist. Satisfy **every** acceptance criterion in the design's AC set, golden
@@ -92,7 +131,7 @@ meant to work before touching code.
   authoring to amend). Update the *design* first, then implement — never the
   other way round.
 
-### 4. Reflect status — keep the task's lifecycle honest
+### 5. Reflect status — keep the task's lifecycle honest
 
 A task carries an implementation sub-flow that the rest of the chain reads, so
 move it as the work moves. Use `transitionTaskStatus` (only legal manual
@@ -128,17 +167,25 @@ server-side; don't try to route around it).
   authoring workflow.
 - **References are feature-scoped** for child kinds: `DES-1` exists under many
   features, so always qualify a child reference with its `featureRef`.
-- **Never invent references or versions** — read them from the tool responses.
+- **Every entity you mention gets a link.** Tool responses carry a `viewUrl`;
+  render references as markdown links to it — in your replies, in PR
+  descriptions, and in commit messages where a reference appears. A bare
+  `TASK-12` is something the reader has to go and find.
+- **Never invent references, versions or URLs** — read them from the tool
+  responses.
 
 ## Process checklist
 
 1. Resolve the task (by reference, or by finding outstanding work).
-2. Confirm it's ready to build (`APPROVED`); if not, surface the gap rather than
+2. Report it back first: **link (`viewUrl`) + title + concise summary**, before
+   any plan or code.
+3. Confirm it's ready to build (`APPROVED`); if not, surface the gap rather than
    forcing a transition.
-3. Read the full ancestor chain (design → ACs → requirement → feature) before
+4. Read the full ancestor chain (design → ACs → requirement → feature) before
    coding.
-4. `transitionTaskStatus` → `IMPLEMENTATION_STARTED`.
-5. Implement to the design and the task's definition-of-done; satisfy every AC.
-6. Raise the PR; `transitionTaskStatus` → `PR_RAISED`; link the PR back.
-7. If the design proved wrong or incomplete, report it (or fix the *design* via
+5. `transitionTaskStatus` → `IMPLEMENTATION_STARTED`.
+6. Implement to the design and the task's definition-of-done; satisfy every AC.
+7. Raise the PR; `transitionTaskStatus` → `PR_RAISED`; link the PR back, and
+   link the task (and any entity you cite) from the PR description.
+8. If the design proved wrong or incomplete, report it (or fix the *design* via
    authoring) — don't let the code and the spec diverge.
