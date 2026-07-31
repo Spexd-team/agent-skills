@@ -282,24 +282,25 @@ architecture that isn't already in the design.
   not as plain text:
 
   ```markdown
-  satisfies [DES-9](https://www.spexd.com/feature/FEAT-3/REQ-7/DES-9)
+  satisfies [DES-9](https://www.spexd.com/e/DES-9)
   ```
 
-  `getEntity` / `getEntities`, `listFeatures`, `listChildren` and
-  `searchEntities` all return `viewUrl` alongside the reference — take the URL
-  from the response rather than composing one yourself, and if you don't have
-  it, read the entity rather than guessing. Two tools don't return it:
-  `readDocument` (keep the link from whichever tool surfaced the entity) and
-  the outstanding-work tools, whose items carry a `path` array that *is* the
-  URL — `https://www.spexd.com/feature/` + the segments joined with `/`. That
-  `path` is optional and dropped whenever an ancestor link is missing; when
-  it's absent, pass the item's `reference` to `getEntity` and take the
-  `viewUrl` from there rather than composing a partial path.
+  An entity's address is its bare reference under `/e/` — the ancestor chain
+  is derived from it, not spelled out in the URL. `getEntity` / `getEntities`,
+  `listFeatures`, `listChildren` and `searchEntities` all return `viewUrl`
+  alongside the reference — take the URL from the response rather than
+  composing one yourself, and if you don't have it, read the entity rather
+  than guessing. Two tools don't return it: `readDocument` (keep the link from
+  whichever tool surfaced the entity) and the outstanding-work tools, whose
+  items carry a `reference` — compose `https://www.spexd.com/e/` + that
+  reference. Don't build the link from the `path` of ancestors those items also
+  carry: it is optional, and the ancestors are what the view derives from the
+  leaf rather than part of the address.
 
   An acceptance criterion is the one exception: its reference is numbered
   within its requirement, so `AC-3` is not addressable on its own and is
-  linked as a query on its requirement's URL —
-  `[AC-3](https://www.spexd.com/feature/FEAT-17/REQ-4?ac=AC-3)`.
+  linked as a query on its requirement's address —
+  `[AC-3](https://www.spexd.com/e/REQ-4?ac=AC-3)`.
 
   A bare `AC-3` or `DES-9` makes the reader go and find it. Link it.
 - **For features and requirements**, a useful body shape is: `## Overview`
