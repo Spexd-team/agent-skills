@@ -87,11 +87,12 @@ by tests.
 `listChildren` and `searchEntities` — take it from the response rather than
 composing a URL yourself. Two tools don't return one: `readDocument` (so keep
 the link from whichever tool surfaced the entity), and the outstanding-work
-tools, which return a `path` array instead — there, the address is the path's
-**last** segment, the leaf: `https://www.spexd.com/e/` + that segment
-(`["FEAT-15","REQ-64","DES-252"]` → `https://www.spexd.com/e/DES-252`). The
-ancestors in the path are what the view derives; they are not part of the
-address. If the ask spans several entities — "what's outstanding on FEAT-6" —
+tools, whose items carry a `reference` — and that reference *is* the address:
+`https://www.spexd.com/e/` + it (`DES-252` → `https://www.spexd.com/e/DES-252`).
+Don't build the link out of the `path` of ancestors those items also carry: it
+is optional and dropped whenever an ancestor link is missing, and the ancestors
+are what the view derives from the leaf rather than part of the address.
+If the ask spans several entities — "what's outstanding on FEAT-6" —
 give the same link + title + one-line summary for each, then say which one
 you're picking up.
 
@@ -106,8 +107,9 @@ Before writing code, read the whole ancestor chain so you build the right thing:
 - **Design** (`getEntity` / `readDocument`) — the parent. This is where the
   architecture, data model, contracts, algorithms and trade-offs are. **This is
   your primary spec.** A design may fulfil several acceptance criteria; note them.
-- **Acceptance criteria** (`getRequirementCriteria` — pass one reference or the
-  whole set; `listAcceptanceCriteria` for a requirement's full set) — the testable
+- **Acceptance criteria** (`getRequirementCriteria`, by `featureRef` +
+  `requirementRef` — pass one reference or the whole set; or
+  `listAcceptanceCriteria` for a requirement's full set) — the testable
   conditions your implementation must satisfy. These are your acceptance tests in
   prose: your code is done when every one passes.
 - **Requirement** (`getEntity`) — the behavioural rule the ACs prove.
@@ -173,7 +175,8 @@ server-side; don't try to route around it).
   result rather than failing the batch.
 - **You generally don't author while implementing.** If you must correct the spec,
   edits are anchored, not whole-document: `readDocument` → `searchDocument` →
-  `insertContent` / `replaceContent` / `deleteContent`, then a separate content-less
+  `editDocument` (an ordered batch of insert/replace/delete ops, applied together
+  or rejected together), then a separate content-less
   `publishDocument` with the `baseVersion` from `readDocument` (a stale `baseVersion` is
   rejected with a conflict — re-read and retry). See `spexd-authoring` for the full
   authoring workflow.

@@ -291,10 +291,11 @@ architecture that isn't already in the design.
   alongside the reference — take the URL from the response rather than
   composing one yourself, and if you don't have it, read the entity rather
   than guessing. Two tools don't return it: `readDocument` (keep the link from
-  whichever tool surfaced the entity) and the outstanding-work tools, which
-  return a `path` array whose **last** segment is the address —
-  `https://www.spexd.com/e/` + that leaf, the ancestors being what the view
-  derives rather than part of the link.
+  whichever tool surfaced the entity) and the outstanding-work tools, whose
+  items carry a `reference` — compose `https://www.spexd.com/e/` + that
+  reference. Don't build the link from the `path` of ancestors those items also
+  carry: it is optional, and the ancestors are what the view derives from the
+  leaf rather than part of the address.
 
   An acceptance criterion is the one exception: its reference is numbered
   within its requirement, so `AC-3` is not addressable on its own and is
@@ -316,8 +317,9 @@ architecture that isn't already in the design.
   the live-document tools, never by submitting a full body: `readDocument`
   (the live draft — it may be ahead of the published version `getEntity`
   returns) → `searchDocument` (exact text → match handles with
-  context) → `insertContent` / `replaceContent` / `deleteContent` (targeted
-  edits at those handles, or at `doc_start`/`doc_end`). Your edits appear
+  context) → `editDocument` (an ordered batch of insert/replace/delete ops
+  targeting those handles, or `doc_start`/`doc_end`, applied together or
+  rejected together). Your edits appear
   live to anyone editing the entity and merge with their concurrent
   changes. A stale handle (the matched text changed under you) is rejected
   — re-run `searchDocument` and retry.
@@ -370,7 +372,7 @@ architecture that isn't already in the design.
 4. **Move wording, don't duplicate.** When extracting a lower-level entity
    from a higher one (a requirement out of a feature, an AC out of a
    requirement), remove the moved text from the parent's draft
-   (`searchDocument` → `deleteContent`) and publish the parent. Spexd links
+   (`searchDocument` → `editDocument` with a delete op) and publish the parent. Spexd links
    the child to its parent automatically, so there's no need to list or
    point to it from the parent body.
 5. **Verify at the end.** Walk the chain (`listFeatures` → `listChildren`

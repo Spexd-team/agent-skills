@@ -166,8 +166,8 @@ not one-per-requirement.
    the gap rather than fabricating a mechanism.
 3. **Link designs to the ACs they fulfil** across every feature, so each
    requirement's acceptance criteria are covered by at least one design. Use the
-   `getOutstandingWorkForFeature` / `listChildren` (`kind: "acceptanceCriteria"`)
-   views to confirm no AC is left without a design. (Tasks are out of scope for an import
+   `getOutstandingWorkForFeature` / `listAcceptanceCriteria` views to confirm no
+   AC is left without a design. (Tasks are out of scope for an import
    — leave decomposition to `spexd-authoring`/`spexd-implementing` once humans
    have reviewed.)
 
@@ -192,7 +192,7 @@ consistent.
   `create*` is enough; never call a `transition*Status` tool during an import.
 - **MCP surface** (see `spexd-authoring` for the full editing/publishing model):
   entities are created with `create*`, edited via the anchored document tools
-  (`readDocument` → `searchDocument` → `insert`/`replace`/`deleteContent`), and
+  (`readDocument` → `searchDocument` → `editDocument`), and
   flushed with a separate content-less `publishDocument`. References are
   server-generated and **unique across the org** — read them from the create
   response and never invent them. A bare reference resolves on its own, so
