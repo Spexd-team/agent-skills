@@ -173,12 +173,17 @@ server-side; don't try to route around it).
   and the `viewUrl`. **`getEntities`** is the batched sibling: 1–100 references of
   any mix of kinds in one call, with unmatched references simply omitted from the
   result rather than failing the batch.
-- **You generally don't author while implementing.** If you must correct the spec,
-  edits are anchored, not whole-document: `readDocument` → `searchDocument` →
-  `editDocument` (an ordered batch of insert/replace/delete ops, applied together
-  or rejected together), then a separate content-less
-  `publishDocument` with the `baseVersion` from `readDocument` (a stale `baseVersion` is
-  rejected with a conflict — re-read and retry). See `spexd-authoring` for the full
+- **You generally don't author while implementing.** If you must correct the spec:
+  `readDocument`, then one `editDocument` carrying **every** change as an ordered
+  `ops` batch — not a call per change — each op targeting `target.find` (exact
+  text, occurring exactly once) or, for something with no text to match, a
+  `target.handle` from `searchDocument`. If any op fails the whole batch is
+  rejected and the document is untouched. Publishing is then **two** calls:
+  a content-less `publishDocument` (`baseVersion` from `readDocument`, advisory)
+  which writes nothing and returns a cascade proposal plus a one-hour token, and
+  `confirmPublish({ token })`, which is what actually writes — always two, even
+  when nothing would be invalidated, and not confirming is simply cancelling. A
+  confirm rejected as stale means re-propose. See `spexd-authoring` for the full
   authoring workflow.
 - **A reference is org-unique, so nothing has to be qualified to read it back.**
   `TASK-991` pasted from a branch name or a PR title resolves on its own through

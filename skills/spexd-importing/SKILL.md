@@ -131,8 +131,9 @@ for altitude; and the two rules above. A prompt template:
 > one condition each, golden path *and* the important failure/edge paths as
 > **separate** criteria. Here you may use judgement and go beyond today's
 > behaviour: describe what a correct implementation *should* guarantee, not only
-> what the current code does. `createAcceptanceCriteria` under each requirement.
-> Prefer measurable outcomes over adjectives.
+> what the current code does. `createAcceptanceCriterion` under each requirement,
+> then `confirmPublish` with the token it returns — the create alone writes
+> nothing. Prefer measurable outcomes over adjectives.
 >
 > Create everything in **DRAFT** — do not transition any status. Return the
 > requirement and AC references you created, plus any capability you noticed
@@ -191,9 +192,18 @@ consistent.
 - **Everything DRAFT, no transitions.** Reiterated because it's easy to slip:
   `create*` is enough; never call a `transition*Status` tool during an import.
 - **MCP surface** (see `spexd-authoring` for the full editing/publishing model):
-  entities are created with `create*`, edited via the anchored document tools
-  (`readDocument` → `searchDocument` → `editDocument`), and
-  flushed with a separate content-less `publishDocument`. References are
+  entities are created with `create*`; edited by reading with `readDocument`
+  and sending **every** change for that document as one `editDocument` call
+  with an ordered `ops` batch (targeting exact text via `target.find`, falling
+  back to a `searchDocument` handle only for something with no text to match);
+  and published in **two** calls — a content-less `publishDocument`, which
+  writes nothing and returns a cascade proposal with a one-hour token, then
+  `confirmPublish({ token })`, which is the call that writes. It is always two
+  calls, and during an import the proposal is usually empty — everything you
+  create is `DRAFT`, so there is rarely an approved descendant to invalidate —
+  but the confirm is still required, and skipping it means nothing was
+  published. `createAcceptanceCriterion` proposes and confirms the same way.
+  References are
   server-generated and **unique across the org** — read them from the create
   response and never invent them. A bare reference resolves on its own, so
   reading one back needs nothing else (`getEntity`, or `getEntities` for a
