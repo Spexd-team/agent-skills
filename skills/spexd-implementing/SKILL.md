@@ -47,10 +47,12 @@ context → build → reflect status.** Never skip straight from "find" to
 
 ### 1. Find the work
 
-- **Given a task reference**, read it directly: `getTasks` (published version;
-  pass one reference or several) and `readDocument` (the LIVE draft — it may be
-  ahead of the published version, and it also returns the current lifecycle
-  `status` and published head `version`).
+- **Given a task reference**, read it directly: `getEntity` (published version;
+  the bare reference is enough — no owning feature, no kind) and `readDocument`
+  (the LIVE draft — it may be ahead of the published version, and it also returns
+  the current lifecycle `status` and published head `version`). `getEntity`
+  returns the owning `feature`, which is what `readDocument` needs for a child
+  kind, so read it first and pass that through.
 - **Given a feature/requirement/design and asked for "what's next"**, use the
   outstanding-work tools — `getOutstandingWorkForFeature`,
   `getOutstandingWorkForRequirement`, `getOutstandingWorkForDesign` — to list the
@@ -82,16 +84,19 @@ a valid request, rejects the three failure cases in AC-4/AC-5, and the state
 machine is covered by tests.
 ```
 
-`viewUrl` comes back from `get{Entity}`, `listFeatures`, `listChildren` and
-`searchEntities` — take it from the response rather than composing a URL
-yourself. Two tools don't return one: `readDocument` (so keep the link from
-whichever tool surfaced the entity), and the outstanding-work tools, which
-return a `path` array instead — that path *is* the URL,
+`viewUrl` comes back from `getEntity` / `getEntities`, `listFeatures`,
+`listChildren` and `searchEntities` — take it from the response rather than
+composing a URL yourself. Two tools don't return one: `readDocument` (so keep
+the link from whichever tool surfaced the entity), and the outstanding-work
+tools, which return a `path` array instead — that path *is* the URL,
 `https://www.spexd.com/feature/` + the path segments joined with `/`
 (`["FEAT-15","REQ-64","DES-252"]` →
-`https://www.spexd.com/feature/FEAT-15/REQ-64/DES-252`). If the ask spans
-several entities — "what's outstanding on FEAT-6" — give the same
-link + title + one-line summary for each, then say which one you're picking up.
+`https://www.spexd.com/feature/FEAT-15/REQ-64/DES-252`). `path` is optional and
+dropped whenever an ancestor link is missing; when it's absent, pass the item's
+`reference` to `getEntity` and take the `viewUrl` from there rather than
+composing a partial path. If the ask spans several entities — "what's
+outstanding on FEAT-6" — give the same link + title + one-line summary for
+each, then say which one you're picking up.
 
 Do this even when you're about to start work immediately: it's what lets a
 human confirm you're on the right thing before you spend effort on it.
@@ -101,20 +106,27 @@ human confirm you're on the right thing before you spend effort on it.
 A task on its own is only a definition-of-done. Its *meaning* lives above it.
 Before writing code, read the whole ancestor chain so you build the right thing:
 
-- **Design** (`getDesigns` / `readDocument`) — the parent. This is where the
+- **Design** (`getEntity` / `readDocument`) — the parent. This is where the
   architecture, data model, contracts, algorithms and trade-offs are. **This is
   your primary spec.** A design may fulfil several acceptance criteria; note them.
-- **Acceptance criteria** (`getAcceptanceCriteria` — pass one reference or the
-  whole set) — the testable conditions your implementation must satisfy. These
-  are your acceptance tests in prose: your code is done when every one passes.
-- **Requirement** (`getRequirements`) — the behavioural rule the ACs prove.
-- **Feature** (`getFeatures`) — the product capability and why it matters; the
+- **Acceptance criteria** (`getRequirementCriteria`, by `featureRef` +
+  `requirementRef` — pass one reference or the whole set; or
+  `listAcceptanceCriteria` for a requirement's full set) — the testable
+  conditions your implementation must satisfy. These are your acceptance tests in
+  prose: your code is done when every one passes.
+- **Requirement** (`getEntity`) — the behavioural rule the ACs prove.
+- **Feature** (`getEntity`) — the product capability and why it matters; the
   scope boundaries that tell you what *not* to build.
 
-Use the `get{Entity}` tools to pull one or several siblings at once, and `readDocument`
-whenever you need the live draft rather than the last published version. Read
-enough of the chain that you could explain *why* the task exists and *how* it's
-meant to work before touching code.
+`getEntity` returns the entity's **ordered ancestor chain** alongside it, so
+reading the task already tells you the design, requirement and feature above it
+— then `getEntities` pulls that whole set in one batched call, mixed kinds and
+all. Acceptance criteria are the exception: an AC's reference is numbered within
+its requirement rather than org-wide, so it is fetched through its owning
+requirement, not by `getEntity`. Use `readDocument` whenever you need the live
+draft rather than the last published version. Read enough of the chain that you
+could explain *why* the task exists and *how* it's meant to work before touching
+code.
 
 ### 4. Build
 
@@ -153,20 +165,34 @@ server-side; don't try to route around it).
 
 ## Operational notes (MCP surface)
 
-- **Reads**: `get{Entity}` returns the last published version; `readDocument`
+- **Reads**: `getEntity` returns the last published version; `readDocument`
   returns the LIVE collaborative draft plus the current `status` and published head
   `version`. Prefer `readDocument` when you need the freshest content or the status.
-- **`get{Entity}`** takes one or more references and pulls those entities of one
-  kind at once (scoped to a feature for child kinds) — pass a single reference to
-  read one, or a set to gather an AC set or a design's siblings in one call.
-- **You generally don't author while implementing.** If you must correct the spec,
-  edits are anchored, not whole-document: `readDocument` → `searchDocument` →
-  `insertContent` / `replaceContent` / `deleteContent`, then a separate content-less
-  `publishDocument` with the `baseVersion` from `readDocument` (a stale `baseVersion` is
-  rejected with a conflict — re-read and retry). See `spexd-authoring` for the full
+- **`getEntity` addresses any entity by its bare reference** — no kind, no owning
+  feature. The type token is already in the reference and a reference is unique
+  across the org, so `DES-9` on its own resolves to exactly one entity. The result
+  is discriminated by `type` and carries the owning `feature`, the ancestor chain
+  and the `viewUrl`. **`getEntities`** is the batched sibling: 1–100 references of
+  any mix of kinds in one call, with unmatched references simply omitted from the
+  result rather than failing the batch.
+- **You generally don't author while implementing.** If you must correct the spec:
+  `readDocument`, then one `editDocument` carrying **every** change as an ordered
+  `ops` batch — not a call per change — each op targeting `target.find` (exact
+  text, occurring exactly once) or, for something with no text to match, a
+  `target.handle` from `searchDocument`. If any op fails the whole batch is
+  rejected and the document is untouched. Publishing is then **two** calls:
+  a content-less `publishDocument` (`baseVersion` from `readDocument`, advisory)
+  which writes nothing and returns a cascade proposal plus a one-hour token, and
+  `confirmPublish({ token })`, which is what actually writes — always two, even
+  when nothing would be invalidated, and not confirming is simply cancelling. A
+  confirm rejected as stale means re-propose. See `spexd-authoring` for the full
   authoring workflow.
-- **References are feature-scoped** for child kinds: `DES-1` exists under many
-  features, so always qualify a child reference with its `featureRef`.
+- **A reference is org-unique, so nothing has to be qualified to read it back.**
+  `TASK-991` pasted from a branch name or a PR title resolves on its own through
+  `getEntity`. The *document* tools (`readDocument`, `searchDocument`,
+  `editDocument`, `publishDocument`) still address by `kind` + `reference` and, for
+  child kinds, `featureRef` — take that feature from the `getEntity` result rather
+  than hunting for it.
 - **Every entity you mention gets a link.** Tool responses carry a `viewUrl`;
   render references as markdown links to it — in your replies, in PR
   descriptions, and in commit messages where a reference appears. A bare

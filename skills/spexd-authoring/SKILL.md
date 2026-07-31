@@ -282,21 +282,26 @@ architecture that isn't already in the design.
   not as plain text:
 
   ```markdown
-  satisfies [AC-3](https://www.spexd.com/feature/FEAT-17/REQ-4/AC-3)
+  satisfies [DES-9](https://www.spexd.com/feature/FEAT-3/REQ-7/DES-9)
   ```
 
-  `get{Entity}`, `listFeatures`, `listChildren` and `searchEntities` all
-  return `viewUrl` alongside the reference — take the URL from the response
-  rather than composing one yourself, and if you don't have it, read the
-  entity rather than guessing. Two tools don't return it: `readDocument` (keep
-  the link from whichever tool surfaced the entity) and the outstanding-work
-  tools, which return a `path` array that *is* the URL —
-  `https://www.spexd.com/feature/` + the segments joined with `/`.
+  `getEntity` / `getEntities`, `listFeatures`, `listChildren` and
+  `searchEntities` all return `viewUrl` alongside the reference — take the URL
+  from the response rather than composing one yourself, and if you don't have
+  it, read the entity rather than guessing. Two tools don't return it:
+  `readDocument` (keep the link from whichever tool surfaced the entity) and
+  the outstanding-work tools, whose items carry a `path` array that *is* the
+  URL — `https://www.spexd.com/feature/` + the segments joined with `/`. That
+  `path` is optional and dropped whenever an ancestor link is missing; when
+  it's absent, pass the item's `reference` to `getEntity` and take the
+  `viewUrl` from there rather than composing a partial path.
 
-  A bare `AC-3` makes the reader go and find it, and is ambiguous besides,
-  because requirement/AC/design/task numbering is **feature-scoped**: REQ-1
-  exists under many features. The link carries the feature in its path, which
-  is exactly the qualification a bare reference is missing.
+  An acceptance criterion is the one exception: its reference is numbered
+  within its requirement, so `AC-3` is not addressable on its own and is
+  linked as a query on its requirement's URL —
+  `[AC-3](https://www.spexd.com/feature/FEAT-17/REQ-4?ac=AC-3)`.
+
+  A bare `AC-3` or `DES-9` makes the reader go and find it. Link it.
 - **For features and requirements**, a useful body shape is: `## Overview`
   (one or two sentences, product language) → behaviour/scope in product terms.
   Keep the mechanism out entirely rather than giving it a section — the "how"
@@ -307,25 +312,83 @@ architecture that isn't already in the design.
 
 ## Operational notes (MCP surface)
 
-- **Editing is anchored, not whole-document.** Entities are edited through
-  the live-document tools, never by submitting a full body: `readDocument`
-  (the live draft — it may be ahead of the published version the `get*`
-  tools return) → `searchDocument` (exact text → match handles with
-  context) → `insertContent` / `replaceContent` / `deleteContent` (targeted
-  edits at those handles, or at `doc_start`/`doc_end`). Your edits appear
-  live to anyone editing the entity and merge with their concurrent
-  changes. A stale handle (the matched text changed under you) is rejected
-  — re-run `searchDocument` and retry.
-- **Publishing is a separate, content-less step.** When the edits are
-  complete, `publishDocument` (one generic tool for every kind — addressed by
-  `kind` + `featureRef?` + `reference`, like `readDocument`) flushes the
-  entity's current shared draft to a new immutable version. It takes
-  `baseVersion` (the published head from `readDocument`); a stale base returns
-  409 — your draft edits stay in place, so re-read and publish again. Don't
-  publish after every micro-edit: finish a coherent set of changes, then
-  publish once.
-- **Renaming**: pass the optional `title` on the `publishDocument` call to
-  rename an entity alongside publishing.
+- **Editing is targeted and batched, not whole-document.** Entities are
+  edited through the live-document tools, never by submitting a full body.
+  Read first — `readDocument` (the live draft; it may be ahead of the
+  published version `getEntity` returns) — then send **every** change for
+  that document as a single `editDocument` call carrying an ordered `ops`
+  array (1–50). Explicitly *not* one call per change. Your edits appear live
+  to anyone editing the entity and merge with their concurrent changes.
+  - **Target by text first.** An op names where it acts with `target.find`:
+    the exact text to act on, which must occur **exactly once** in the
+    document — include surrounding words when a short phrase repeats.
+  - **`searchDocument` is the fallback, not a step in the chain.** It returns
+    match handles for `target.handle`, which is *required* for anything with
+    no text to match — an image, an attachment, a horizontal rule, an
+    `@`-mention, a `#`-entity-reference, an empty bullet or table cell — and
+    for any target you can't name uniquely as text. A stale handle (what it
+    anchored changed under you) is rejected: re-run `searchDocument` and retry.
+  - **Ops apply in order**, each seeing the result of the ones before it, so
+    a later op can act on text an earlier op inserted.
+  - **All-or-nothing.** If any op fails, the whole batch is rejected and the
+    document is left untouched, with the error naming the op and why — fix
+    that op and resend. Collaborators see the batch land as one change.
+  - **Per-op shapes that are easy to get wrong:** `insert` takes either a
+    `target` or `at: doc_start | doc_end` (mutually exclusive), plus
+    `placement: before | after`; `replace` content must be a **single
+    paragraph of inline markdown** — block content is rejected, so
+    restructuring blocks is a `delete` op *plus* an `insert` op; `delete`
+    takes an optional `through` second target to remove a range.
+- **Publishing is two calls, and the first one writes nothing.** When the
+  edits are complete, `publishDocument` (one generic tool for every kind —
+  addressed by `kind` + `featureRef?` + `reference`, like `readDocument`)
+  **proposes** the publish: it returns the cascade the publish would perform
+  — every approved descendant it would reach, what it would do to each and
+  why — plus a single-use token valid for one hour. `confirmPublish({ token })`
+  is the call that actually writes the new immutable version and applies
+  those invalidations, in one transaction. It is **always two calls**, even
+  when the proposal invalidates nothing. Don't publish after every micro-edit:
+  finish a coherent set of changes, then publish once.
+- **Not confirming is cancelling.** Let the token expire and nothing was
+  written — there is nothing to discard and no cancel tool.
+- **`baseVersion` is advisory.** Still required on the propose, and still the
+  published head from `readDocument`, but it records what you edited against
+  rather than gating the write — the publish targets the current head. The
+  staleness contract lives on the *confirm*, which is rejected if the entity
+  or any assessed descendant moved since you proposed; the fix is to
+  re-propose (the same contract as a stale `searchDocument` handle).
+- **Review the outcome set before confirming.** The confirm applies the
+  proposed outcomes exactly as you reviewed them — the assessment is *not*
+  re-run, which is what makes reviewing it meaningful. Read what each
+  descendant got, and don't flatten the distinctions:
+  - `not_assessed` — assessment was unavailable, so it is invalidated by
+    default. Relevance was never established; this is not a judgement that
+    your change affects it.
+  - `invalidated` — judged to be affected by the change.
+  - `pruned` — settled behind a spared ancestor, not a judgement of its own.
+- **`skipAssessment` is the choice you have; overruling a sparing is not.**
+  Passing `skipAssessment` on the propose skips the relevance pass and
+  proposes **every** reached descendant for invalidation — the conservative,
+  blanket outcome. It can only widen the blast radius, never narrow it.
+  There is no `invalidateAnyway` tool and `confirmPublish` takes no
+  overrides: invalidating something the assessment spared is **human-only**.
+  If you disagree with a sparing, leave it in place and say so.
+- **Acceptance-criterion writes are the other cascade trigger.**
+  `createAcceptanceCriterion` / `updateAcceptanceCriterion` /
+  `deleteAcceptanceCriterion` also write nothing on the first call: editing a
+  criterion rolls its requirement's version, which can invalidate the designs
+  and tasks approved against it, so each returns the same kind of proposal
+  and redeems through the same `confirmPublish`. The confirm returns the
+  **owning requirement** — the entity whose version moved — and, on a create
+  or an update, the criterion it wrote alongside it in `criterion`. Read the
+  new `AC-n` from there: it is claimed inside the confirm's transaction (which
+  is why the proposal names a new criterion by title rather than by reference),
+  so the confirm response is the only place it reaches you — don't re-list the
+  requirement's criteria and match on title. A delete carries no `criterion`,
+  having written no row. A frozen requirement is rejected with a 409 at the
+  confirm.
+- **Renaming**: pass the optional `title` on the `publishDocument` *propose*
+  call — not on the confirm — to rename an entity alongside publishing.
 - **Status transitions**: `transition*Status` tools move entities through
   the lifecycle (e.g. `DRAFT → CANCELLED`, `DRAFT → READY_FOR_REVIEW`).
   Only legal manual transitions are accepted; illegal moves and
@@ -340,9 +403,11 @@ architecture that isn't already in the design.
      cross-references in other entities).
   2. Edit the retiring entity's draft down to its final content (e.g. a
      short pointer to where the content moved) via the document tools, then
-     publish it — with the final `title` on that `publishDocument` call.
+     publish it — the final `title` goes on the `publishDocument` propose,
+     and `confirmPublish` is what lands both the content and the rename.
   3. Transition it to `CANCELLED`.
-  Cancelling before step 2 makes those edits permanently impossible.
+  Cancelling before step 2 has *fully* completed — the confirm included, not
+  just the propose — makes those edits permanently impossible.
 - References are server-generated; never invent or assume the next number —
   read it from the create response.
 
@@ -359,15 +424,18 @@ architecture that isn't already in the design.
    criterion's designs, a design's tasks) before creating, to avoid duplicates.
 3. **Create top-down.** Feature first, then its requirements
    (`createRequirement` needs the `featureRef` from the create response),
-   then acceptance criteria under each requirement, then designs against the
-   ACs (remember one design may satisfy several ACs), then tasks under each
-   design.
+   then acceptance criteria under each requirement — each a two-call step,
+   `createAcceptanceCriterion` to propose and `confirmPublish` to write —
+   then designs against the ACs (remember one design may satisfy several
+   ACs), then tasks under each design.
 4. **Move wording, don't duplicate.** When extracting a lower-level entity
    from a higher one (a requirement out of a feature, an AC out of a
-   requirement), remove the moved text from the parent's draft
-   (`searchDocument` → `deleteContent`) and publish the parent. Spexd links
-   the child to its parent automatically, so there's no need to list or
-   point to it from the parent body.
+   requirement), remove the moved text from the parent's draft — naturally a
+   single `editDocument` call, whose `ops` delete the extracted passage and
+   make any wording fixes the removal leaves behind — then publish the parent
+   (propose, review the cascade, confirm). Spexd links the child to its
+   parent automatically, so there's no need to list or point to it from the
+   parent body.
 5. **Verify at the end.** Walk the chain (`listFeatures` → `listChildren`
    at each level down) and confirm the created set matches the
    plan and that no implementation detail leaked above Design; report what was

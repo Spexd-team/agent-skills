@@ -104,9 +104,10 @@ work items for Phase 2.
 Delegate **one sub-agent per feature**, in parallel (launch them in a single
 message so they run concurrently). Each sub-agent owns its feature's slice of
 the chain end-to-end: it derives the requirements, then the ACs, and creates
-them under that feature via the MCP tools. Because requirement/AC references are
-**feature-scoped**, sub-agents never collide — each writes only under its own
-`featureRef`.
+them under that feature via the MCP tools. Because each sub-agent writes only
+under its own `featureRef`, they work on disjoint subtrees and never collide —
+references themselves are server-generated and unique across the whole org, so
+nothing depends on the fan-out to keep them apart.
 
 Give each sub-agent enough to work independently: the feature's `reference`,
 title and body; the sources that back it; the pointer to load `spexd-authoring`
@@ -130,8 +131,9 @@ for altitude; and the two rules above. A prompt template:
 > one condition each, golden path *and* the important failure/edge paths as
 > **separate** criteria. Here you may use judgement and go beyond today's
 > behaviour: describe what a correct implementation *should* guarantee, not only
-> what the current code does. `createAcceptanceCriteria` under each requirement.
-> Prefer measurable outcomes over adjectives.
+> what the current code does. `createAcceptanceCriterion` under each requirement,
+> then `confirmPublish` with the token it returns — the create alone writes
+> nothing. Prefer measurable outcomes over adjectives.
 >
 > Create everything in **DRAFT** — do not transition any status. Return the
 > requirement and AC references you created, plus any capability you noticed
@@ -165,8 +167,8 @@ not one-per-requirement.
    the gap rather than fabricating a mechanism.
 3. **Link designs to the ACs they fulfil** across every feature, so each
    requirement's acceptance criteria are covered by at least one design. Use the
-   `getOutstandingWorkForFeature` / `listChildren` (`kind: "acceptanceCriteria"`)
-   views to confirm no AC is left without a design. (Tasks are out of scope for an import
+   `getOutstandingWorkForFeature` / `listAcceptanceCriteria` views to confirm no
+   AC is left without a design. (Tasks are out of scope for an import
    — leave decomposition to `spexd-authoring`/`spexd-implementing` once humans
    have reviewed.)
 
@@ -190,12 +192,23 @@ consistent.
 - **Everything DRAFT, no transitions.** Reiterated because it's easy to slip:
   `create*` is enough; never call a `transition*Status` tool during an import.
 - **MCP surface** (see `spexd-authoring` for the full editing/publishing model):
-  entities are created with `create*`, edited via the anchored document tools
-  (`readDocument` → `searchDocument` → `insert`/`replace`/`deleteContent`), and
-  flushed with a separate content-less `publishDocument`. References are
-  server-generated and **feature-scoped** for child kinds — read them from the
-  create response, never invent them, and always qualify a child reference with
-  its feature.
+  entities are created with `create*`; edited by reading with `readDocument`
+  and sending **every** change for that document as one `editDocument` call
+  with an ordered `ops` batch (targeting exact text via `target.find`, falling
+  back to a `searchDocument` handle only for something with no text to match);
+  and published in **two** calls — a content-less `publishDocument`, which
+  writes nothing and returns a cascade proposal with a one-hour token, then
+  `confirmPublish({ token })`, which is the call that writes. It is always two
+  calls, and during an import the proposal is usually empty — everything you
+  create is `DRAFT`, so there is rarely an approved descendant to invalidate —
+  but the confirm is still required, and skipping it means nothing was
+  published. `createAcceptanceCriterion` proposes and confirms the same way.
+  References are
+  server-generated and **unique across the org** — read them from the create
+  response and never invent them. A bare reference resolves on its own, so
+  reading one back needs nothing else (`getEntity`, or `getEntities` for a
+  batch); only the document tools still take `kind` + `featureRef` for child
+  kinds.
 
 ## Process checklist
 
