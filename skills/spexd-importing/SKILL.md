@@ -123,8 +123,8 @@ for altitude; and the two rules above. A prompt template:
 > each one in what you observe; don't invent capabilities the code doesn't
 > show. For each, `createRequirement` under `<featureRef>` with a product-level
 > body and a `**Sources:**` line. Keep mechanism out (no vendors, tables,
-> algorithms, or code — those wait for Design). Check `listChildren`
-> (`kind: "feature"`) first to avoid duplicates.
+> algorithms, or code — those wait for Design). Check `listChildren` on
+> `<featureRef>` first to avoid duplicates.
 >
 > **Step B — Acceptance criteria.** For each requirement you created, write the
 > acceptance criteria that would prove it — atomic Given/When/Then scenarios,
@@ -206,9 +206,9 @@ consistent.
   References are
   server-generated and **unique across the org** — read them from the create
   response and never invent them. A bare reference resolves on its own, so
-  reading one back needs nothing else (`getEntity`, or `getEntities` for a
-  batch); only the document tools still take `kind` + `featureRef` for child
-  kinds.
+  reading one back needs nothing else — `getEntity` (or `getEntities` for a
+  batch), and the document tools and `listChildren` alike. Only writes name a
+  parent, as `createRequirement` takes a `featureRef`.
 
 ## Process checklist
 
