@@ -68,33 +68,35 @@ back** is what that entity actually is. Before any plan, any file reads, any
 code, lead with:
 
 1. **A link to the entity** — the `viewUrl` from the tool response, as a
-   markdown link on the reference, e.g. `[TASK-12](https://www.spexd.com/e/TASK-12)`.
+   markdown link on the reference, e.g.
+   `[TASK-12](https://www.spexd.com/feature/FEAT-3/REQ-7/DES-9/TASK-12)`.
 2. **Its title**, verbatim.
 3. **A concise summary** — two or three sentences on what it covers and what
    "done" means, in your own words rather than a paste of the body.
 
 ```markdown
-**[TASK-12](https://www.spexd.com/e/TASK-12) — Implement `POST /api/rides`**
+**[TASK-12](https://www.spexd.com/feature/FEAT-3/REQ-7/DES-9/TASK-12) — Implement `POST /api/rides`**
 
 Creates the ride-request endpoint and its state machine transitions per
-[DES-9](https://www.spexd.com/e/DES-9), validating rider location and payment
-method before persisting. Done when the endpoint accepts a valid request,
-rejects the three failure cases in AC-4/AC-5, and the state machine is covered
-by tests.
+[DES-9](https://www.spexd.com/feature/FEAT-3/REQ-7/DES-9), validating rider
+location and payment method before persisting. Done when the endpoint accepts
+a valid request, rejects the three failure cases in AC-4/AC-5, and the state
+machine is covered by tests.
 ```
 
 `viewUrl` comes back from `getEntity` / `getEntities`, `listFeatures`,
 `listChildren` and `searchEntities` — take it from the response rather than
 composing a URL yourself. Two tools don't return one: `readDocument` (so keep
 the link from whichever tool surfaced the entity), and the outstanding-work
-tools, whose items carry a `reference` — and that reference *is* the address:
-`https://www.spexd.com/e/` + it (`DES-252` → `https://www.spexd.com/e/DES-252`).
-Don't build the link out of the `path` of ancestors those items also carry: it
-is optional and dropped whenever an ancestor link is missing, and the ancestors
-are what the view derives from the leaf rather than part of the address.
-If the ask spans several entities — "what's outstanding on FEAT-6" —
-give the same link + title + one-line summary for each, then say which one
-you're picking up.
+tools, which return a `path` array instead — that path *is* the URL,
+`https://www.spexd.com/feature/` + the path segments joined with `/`
+(`["FEAT-15","REQ-64","DES-252"]` →
+`https://www.spexd.com/feature/FEAT-15/REQ-64/DES-252`). `path` is optional and
+dropped whenever an ancestor link is missing; when it's absent, pass the item's
+`reference` to `getEntity` and take the `viewUrl` from there rather than
+composing a partial path. If the ask spans several entities — "what's
+outstanding on FEAT-6" — give the same link + title + one-line summary for
+each, then say which one you're picking up.
 
 Do this even when you're about to start work immediately: it's what lets a
 human confirm you're on the right thing before you spend effort on it.

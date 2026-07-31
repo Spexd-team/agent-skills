@@ -282,25 +282,24 @@ architecture that isn't already in the design.
   not as plain text:
 
   ```markdown
-  satisfies [DES-9](https://www.spexd.com/e/DES-9)
+  satisfies [DES-9](https://www.spexd.com/feature/FEAT-3/REQ-7/DES-9)
   ```
 
-  An entity's address is its bare reference under `/e/` — the ancestor chain
-  is derived from it, not spelled out in the URL. `getEntity` / `getEntities`,
-  `listFeatures`, `listChildren` and `searchEntities` all return `viewUrl`
-  alongside the reference — take the URL from the response rather than
-  composing one yourself, and if you don't have it, read the entity rather
-  than guessing. Two tools don't return it: `readDocument` (keep the link from
-  whichever tool surfaced the entity) and the outstanding-work tools, whose
-  items carry a `reference` — compose `https://www.spexd.com/e/` + that
-  reference. Don't build the link from the `path` of ancestors those items also
-  carry: it is optional, and the ancestors are what the view derives from the
-  leaf rather than part of the address.
+  `getEntity` / `getEntities`, `listFeatures`, `listChildren` and
+  `searchEntities` all return `viewUrl` alongside the reference — take the URL
+  from the response rather than composing one yourself, and if you don't have
+  it, read the entity rather than guessing. Two tools don't return it:
+  `readDocument` (keep the link from whichever tool surfaced the entity) and
+  the outstanding-work tools, whose items carry a `path` array that *is* the
+  URL — `https://www.spexd.com/feature/` + the segments joined with `/`. That
+  `path` is optional and dropped whenever an ancestor link is missing; when
+  it's absent, pass the item's `reference` to `getEntity` and take the
+  `viewUrl` from there rather than composing a partial path.
 
   An acceptance criterion is the one exception: its reference is numbered
   within its requirement, so `AC-3` is not addressable on its own and is
-  linked as a query on its requirement's address —
-  `[AC-3](https://www.spexd.com/e/REQ-4?ac=AC-3)`.
+  linked as a query on its requirement's URL —
+  `[AC-3](https://www.spexd.com/feature/FEAT-17/REQ-4?ac=AC-3)`.
 
   A bare `AC-3` or `DES-9` makes the reader go and find it. Link it.
 - **For features and requirements**, a useful body shape is: `## Overview`
@@ -380,11 +379,14 @@ architecture that isn't already in the design.
   criterion rolls its requirement's version, which can invalidate the designs
   and tasks approved against it, so each returns the same kind of proposal
   and redeems through the same `confirmPublish`. The confirm returns the
-  **owning requirement** — the entity whose version moved — so re-list its
-  criteria if you need the written criterion back. A create's `AC-n` is
-  claimed inside that transaction, which is why the proposal names a new
-  criterion by title rather than by reference. A frozen requirement is
-  rejected with a 409 at the confirm.
+  **owning requirement** — the entity whose version moved — and, on a create
+  or an update, the criterion it wrote alongside it in `criterion`. Read the
+  new `AC-n` from there: it is claimed inside the confirm's transaction (which
+  is why the proposal names a new criterion by title rather than by reference),
+  so the confirm response is the only place it reaches you — don't re-list the
+  requirement's criteria and match on title. A delete carries no `criterion`,
+  having written no row. A frozen requirement is rejected with a 409 at the
+  confirm.
 - **Renaming**: pass the optional `title` on the `publishDocument` *propose*
   call — not on the confirm — to rename an entity alongside publishing.
 - **Status transitions**: `transition*Status` tools move entities through
