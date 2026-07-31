@@ -282,21 +282,26 @@ architecture that isn't already in the design.
   not as plain text:
 
   ```markdown
-  satisfies [AC-3](https://www.spexd.com/feature/FEAT-17/REQ-4/AC-3)
+  satisfies [DES-9](https://www.spexd.com/e/DES-9)
   ```
 
-  `get{Entity}`, `listFeatures`, `listChildren` and `searchEntities` all
-  return `viewUrl` alongside the reference — take the URL from the response
-  rather than composing one yourself, and if you don't have it, read the
-  entity rather than guessing. Two tools don't return it: `readDocument` (keep
-  the link from whichever tool surfaced the entity) and the outstanding-work
-  tools, which return a `path` array that *is* the URL —
-  `https://www.spexd.com/feature/` + the segments joined with `/`.
+  An entity's address is its bare reference under `/e/` — the ancestor chain
+  is derived from it, not spelled out in the URL. `getEntity` / `getEntities`,
+  `listFeatures`, `listChildren` and `searchEntities` all return `viewUrl`
+  alongside the reference — take the URL from the response rather than
+  composing one yourself, and if you don't have it, read the entity rather
+  than guessing. Two tools don't return it: `readDocument` (keep the link from
+  whichever tool surfaced the entity) and the outstanding-work tools, which
+  return a `path` array whose **last** segment is the address —
+  `https://www.spexd.com/e/` + that leaf, the ancestors being what the view
+  derives rather than part of the link.
 
-  A bare `AC-3` makes the reader go and find it, and is ambiguous besides,
-  because requirement/AC/design/task numbering is **feature-scoped**: REQ-1
-  exists under many features. The link carries the feature in its path, which
-  is exactly the qualification a bare reference is missing.
+  An acceptance criterion is the one exception: its reference is numbered
+  within its requirement, so `AC-3` is not addressable on its own and is
+  linked as a query on its requirement's address —
+  `[AC-3](https://www.spexd.com/e/REQ-4?ac=AC-3)`.
+
+  A bare `AC-3` or `DES-9` makes the reader go and find it. Link it.
 - **For features and requirements**, a useful body shape is: `## Overview`
   (one or two sentences, product language) → behaviour/scope in product terms.
   Keep the mechanism out entirely rather than giving it a section — the "how"
@@ -309,8 +314,8 @@ architecture that isn't already in the design.
 
 - **Editing is anchored, not whole-document.** Entities are edited through
   the live-document tools, never by submitting a full body: `readDocument`
-  (the live draft — it may be ahead of the published version the `get*`
-  tools return) → `searchDocument` (exact text → match handles with
+  (the live draft — it may be ahead of the published version `getEntity`
+  returns) → `searchDocument` (exact text → match handles with
   context) → `insertContent` / `replaceContent` / `deleteContent` (targeted
   edits at those handles, or at `doc_start`/`doc_end`). Your edits appear
   live to anyone editing the entity and merge with their concurrent

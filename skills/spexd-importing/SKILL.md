@@ -104,9 +104,10 @@ work items for Phase 2.
 Delegate **one sub-agent per feature**, in parallel (launch them in a single
 message so they run concurrently). Each sub-agent owns its feature's slice of
 the chain end-to-end: it derives the requirements, then the ACs, and creates
-them under that feature via the MCP tools. Because requirement/AC references are
-**feature-scoped**, sub-agents never collide — each writes only under its own
-`featureRef`.
+them under that feature via the MCP tools. Because each sub-agent writes only
+under its own `featureRef`, they work on disjoint subtrees and never collide —
+references themselves are server-generated and unique across the whole org, so
+nothing depends on the fan-out to keep them apart.
 
 Give each sub-agent enough to work independently: the feature's `reference`,
 title and body; the sources that back it; the pointer to load `spexd-authoring`
@@ -193,9 +194,11 @@ consistent.
   entities are created with `create*`, edited via the anchored document tools
   (`readDocument` → `searchDocument` → `insert`/`replace`/`deleteContent`), and
   flushed with a separate content-less `publishDocument`. References are
-  server-generated and **feature-scoped** for child kinds — read them from the
-  create response, never invent them, and always qualify a child reference with
-  its feature.
+  server-generated and **unique across the org** — read them from the create
+  response and never invent them. A bare reference resolves on its own, so
+  reading one back needs nothing else (`getEntity`, or `getEntities` for a
+  batch); only the document tools still take `kind` + `featureRef` for child
+  kinds.
 
 ## Process checklist
 
