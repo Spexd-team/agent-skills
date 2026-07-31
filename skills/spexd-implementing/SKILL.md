@@ -47,18 +47,17 @@ context → build → reflect status.** Never skip straight from "find" to
 
 ### 1. Find the work
 
-- **Given a task reference**, read it directly: `getEntity` (published version;
-  the bare reference is enough — no owning feature, no kind) and `readDocument`
-  (the LIVE draft — it may be ahead of the published version, and it also returns
-  the current lifecycle `status` and published head `version`). `getEntity`
-  returns the owning `feature`, which is what `readDocument` needs for a child
-  kind, so read it first and pass that through.
+- **Given a task reference**, read it directly: `getEntity` (published version)
+  and `readDocument` (the LIVE draft — it may be ahead of the published version,
+  and it also returns the current lifecycle `status` and published head
+  `version`). Both take the bare reference and nothing else — no owning feature,
+  no kind — so neither has to wait on the other.
 - **Given a feature/requirement/design and asked for "what's next"**, use the
   outstanding-work tools — `getOutstandingWorkForFeature`,
   `getOutstandingWorkForRequirement`, `getOutstandingWorkForDesign` — to list the
-  descendants whose status needs action, then `listChildren` (`kind: "design"`)
-  to enumerate a design's tasks. Pick a task that is ready to build (see status
-  rules below).
+  descendants whose status needs action, then `listChildren` on the design's
+  reference to enumerate its tasks. Pick a task that is ready to build (see
+  status rules below).
 
 ### 2. Orient — open with the entity, not with the work
 
@@ -109,8 +108,8 @@ Before writing code, read the whole ancestor chain so you build the right thing:
 - **Design** (`getEntity` / `readDocument`) — the parent. This is where the
   architecture, data model, contracts, algorithms and trade-offs are. **This is
   your primary spec.** A design may fulfil several acceptance criteria; note them.
-- **Acceptance criteria** (`getRequirementCriteria`, by `featureRef` +
-  `requirementRef` — pass one reference or the whole set; or
+- **Acceptance criteria** (`getRequirementCriteria`, by `requirementRef` plus
+  the criterion `references` — pass one or the whole set; or
   `listAcceptanceCriteria` for a requirement's full set) — the testable
   conditions your implementation must satisfy. These are your acceptance tests in
   prose: your code is done when every one passes.
@@ -190,9 +189,9 @@ server-side; don't try to route around it).
 - **A reference is org-unique, so nothing has to be qualified to read it back.**
   `TASK-991` pasted from a branch name or a PR title resolves on its own through
   `getEntity`. The *document* tools (`readDocument`, `searchDocument`,
-  `editDocument`, `publishDocument`) still address by `kind` + `reference` and, for
-  child kinds, `featureRef` — take that feature from the `getEntity` result rather
-  than hunting for it.
+  `editDocument`, `publishDocument`) and `listChildren` address the same way —
+  the bare reference, no kind and no owning feature. Only writes name a parent
+  (`createRequirement` takes a `featureRef`) or both ends (`moveTask`).
 - **Every entity you mention gets a link.** Tool responses carry a `viewUrl`;
   render references as markdown links to it — in your replies, in PR
   descriptions, and in commit messages where a reference appears. A bare

@@ -341,7 +341,7 @@ architecture that isn't already in the design.
     takes an optional `through` second target to remove a range.
 - **Publishing is two calls, and the first one writes nothing.** When the
   edits are complete, `publishDocument` (one generic tool for every kind —
-  addressed by `kind` + `featureRef?` + `reference`, like `readDocument`)
+  addressed by `reference` alone, like `readDocument`)
   **proposes** the publish: it returns the cascade the publish would perform
   — every approved descendant it would reach, what it would do to each and
   why — plus a single-use token valid for one hour. `confirmPublish({ token })`
@@ -419,9 +419,10 @@ architecture that isn't already in the design.
    levels (a ticket that states a capability *and* how it's built), split it:
    the capability goes up the chain, the mechanism waits for Design.
 2. **Check for an existing home** (`listFeatures`, then `listChildren` —
-   which lists any entity's direct children by `kind` + `reference`: a
-   feature's requirements, a requirement's acceptance criteria, an acceptance
-   criterion's designs, a design's tasks) before creating, to avoid duplicates.
+   which lists any entity's direct children by `reference` alone: a feature's
+   requirements, a requirement's designs, a design's tasks; acceptance
+   criteria are not a chain level, so list those with `listAcceptanceCriteria`)
+   before creating, to avoid duplicates.
 3. **Create top-down.** Feature first, then its requirements
    (`createRequirement` needs the `featureRef` from the create response),
    then acceptance criteria under each requirement — each a two-call step,
