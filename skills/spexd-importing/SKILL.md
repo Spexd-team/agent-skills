@@ -45,8 +45,8 @@ grounding, and fan-out.
 
 2. **Everything lands in DRAFT.** An import is a *proposal* for humans to
    review, not an approved spec. `create*` raises entities in `DRAFT` by
-   default — so simply create and stop. Do **not** call any `transition*Status`
-   tool to advance entities toward review/approval; leaving them in `DRAFT` is
+   default — so simply create and stop. Do **not** call `transitionEntityStatus`
+   to advance entities toward review/approval; leaving them in `DRAFT` is
    the point. (Approval is a human-only action regardless.)
 
 ## The shape of an import
@@ -167,7 +167,7 @@ not one-per-requirement.
    the gap rather than fabricating a mechanism.
 3. **Link designs to the ACs they fulfil** across every feature, so each
    requirement's acceptance criteria are covered by at least one design. Use the
-   `getOutstandingWorkForFeature` / `listAcceptanceCriteria` views to confirm no
+   `getOutstandingWorkForEntity` / `listAcceptanceCriteria` views to confirm no
    AC is left without a design. (Tasks are out of scope for an import
    — leave decomposition to `spexd-authoring`/`spexd-implementing` once humans
    have reviewed.)
@@ -190,7 +190,7 @@ consistent.
   for a candidate, say so in the body or leave it out — don't manufacture
   detail to fill the shape.
 - **Everything DRAFT, no transitions.** Reiterated because it's easy to slip:
-  `create*` is enough; never call a `transition*Status` tool during an import.
+  `create*` is enough; never call `transitionEntityStatus` during an import.
 - **MCP surface** (see `spexd-authoring` for the full editing/publishing model):
   entities are created with `create*`; edited by reading with `readDocument`
   and sending **every** change for that document as one `editDocument` call

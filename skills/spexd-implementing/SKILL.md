@@ -52,12 +52,11 @@ context → build → reflect status.** Never skip straight from "find" to
   and it also returns the current lifecycle `status` and published head
   `version`). Both take the bare reference and nothing else — no owning feature,
   no kind — so neither has to wait on the other.
-- **Given a feature/requirement/design and asked for "what's next"**, use the
-  outstanding-work tools — `getOutstandingWorkForFeature`,
-  `getOutstandingWorkForRequirement`, `getOutstandingWorkForDesign` — to list the
-  descendants whose status needs action, then `listChildren` on the design's
-  reference to enumerate its tasks. Pick a task that is ready to build (see
-  status rules below).
+- **Given a feature/requirement/design and asked for "what's next"**, use
+  `getOutstandingWorkForEntity` — the bare reference, whichever of the three it
+  is — to list the descendants whose status needs action, then `listChildren`
+  on the design's reference to enumerate its tasks. Pick a task that is ready
+  to build (see status rules below).
 
 ### 2. Orient — open with the entity, not with the work
 
@@ -86,10 +85,10 @@ machine is covered by tests.
 `viewUrl` comes back from `getEntity` / `getEntities`, `listFeatures`,
 `listChildren` and `searchEntities` — take it from the response rather than
 composing a URL yourself. Two tools don't return one: `readDocument` (so keep
-the link from whichever tool surfaced the entity), and the outstanding-work
-tools, which return a `path` array instead — that path *is* the URL,
-`https://www.spexd.com/feature/` + the path segments joined with `/`
-(`["FEAT-15","REQ-64","DES-252"]` →
+the link from whichever tool surfaced the entity), and
+`getOutstandingWorkForEntity`, which returns a `path` array instead — that path
+*is* the URL, `https://www.spexd.com/feature/` + the path segments joined with
+`/` (`["FEAT-15","REQ-64","DES-252"]` →
 `https://www.spexd.com/feature/FEAT-15/REQ-64/DES-252`). `path` is optional and
 dropped whenever an ancestor link is missing; when it's absent, pass the item's
 `reference` to `getEntity` and take the `viewUrl` from there rather than
@@ -145,8 +144,9 @@ code.
 ### 5. Reflect status — keep the task's lifecycle honest
 
 A task carries an implementation sub-flow that the rest of the chain reads, so
-move it as the work moves. Use `transitionTaskStatus` (only legal manual
-transitions are accepted; the server rejects illegal or system-only moves):
+move it as the work moves. Use `transitionEntityStatus` — one tool for every
+kind, taking the task's bare reference (only legal manual transitions are
+accepted; the server rejects illegal or system-only moves):
 
 - **`APPROVED → IMPLEMENTATION_STARTED`** — when you begin building. (A task must
   be `APPROVED` before implementation can start; if it isn't yet, it's not ready
@@ -189,9 +189,11 @@ server-side; don't try to route around it).
 - **A reference is org-unique, so nothing has to be qualified to read it back.**
   `TASK-991` pasted from a branch name or a PR title resolves on its own through
   `getEntity`. The *document* tools (`readDocument`, `searchDocument`,
-  `editDocument`, `publishDocument`) and `listChildren` address the same way —
-  the bare reference, no kind and no owning feature. Only writes name a parent
-  (`createRequirement` takes a `featureRef`) or both ends (`moveTask`).
+  `editDocument`, `publishDocument`), `listChildren`, `transitionEntityStatus`,
+  `moveEntity` and `getOutstandingWorkForEntity` address the same way — the bare
+  reference, no kind and no owning feature. Only a parent is ever named:
+  `createRequirement` takes a `featureRef`, and `moveEntity` takes the new
+  parent as `parentRef`.
 - **Every entity you mention gets a link.** Tool responses carry a `viewUrl`;
   render references as markdown links to it — in your replies, in PR
   descriptions, and in commit messages where a reference appears. A bare
@@ -208,9 +210,9 @@ server-side; don't try to route around it).
    forcing a transition.
 4. Read the full ancestor chain (design → ACs → requirement → feature) before
    coding.
-5. `transitionTaskStatus` → `IMPLEMENTATION_STARTED`.
+5. `transitionEntityStatus` → `IMPLEMENTATION_STARTED`.
 6. Implement to the design and the task's definition-of-done; satisfy every AC.
-7. Raise the PR; `transitionTaskStatus` → `PR_RAISED`; link the PR back, and
+7. Raise the PR; `transitionEntityStatus` → `PR_RAISED`; link the PR back, and
    link the task (and any entity you cite) from the PR description.
 8. If the design proved wrong or incomplete, report it (or fix the *design* via
    authoring) — don't let the code and the spec diverge.

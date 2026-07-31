@@ -266,8 +266,8 @@ architecture that isn't already in the design.
   heading just duplicates it. Begin the body with the sources line (below),
   then the content.
 - **Don't indicate status in the content.** An entity's state lives in its
-  Spexd lifecycle status field (managed via `transition*Status`), not in the
-  body — no "Status:" line, no "shipped / planned / rejected" labels in the
+  Spexd lifecycle status field (managed via `transitionEntityStatus`), not in
+  the body — no "Status:" line, no "shipped / planned / rejected" labels in the
   prose. Describe what the entity *is*, not what state it's in.
 - **Cite sources as links.** Lead with a sources line — Linear URLs for
   tickets, repo links or paths for ADRs — so a reader can navigate straight
@@ -290,7 +290,7 @@ architecture that isn't already in the design.
   from the response rather than composing one yourself, and if you don't have
   it, read the entity rather than guessing. Two tools don't return it:
   `readDocument` (keep the link from whichever tool surfaced the entity) and
-  the outstanding-work tools, whose items carry a `path` array that *is* the
+  `getOutstandingWorkForEntity`, whose items carry a `path` array that *is* the
   URL — `https://www.spexd.com/feature/` + the segments joined with `/`. That
   `path` is optional and dropped whenever an ancestor link is missing; when
   it's absent, pass the item's `reference` to `getEntity` and take the
@@ -389,10 +389,11 @@ architecture that isn't already in the design.
   confirm.
 - **Renaming**: pass the optional `title` on the `publishDocument` *propose*
   call — not on the confirm — to rename an entity alongside publishing.
-- **Status transitions**: `transition*Status` tools move entities through
-  the lifecycle (e.g. `DRAFT → CANCELLED`, `DRAFT → READY_FOR_REVIEW`).
-  Only legal manual transitions are accepted; illegal moves and
-  system-driven statuses are rejected.
+- **Status transitions**: `transitionEntityStatus` moves any entity through
+  the lifecycle (e.g. `DRAFT → CANCELLED`, `DRAFT → READY_FOR_REVIEW`) — one
+  tool for every kind, addressed by the bare reference. Only legal manual
+  transitions are accepted; illegal moves and system-driven statuses are
+  rejected.
 - **"Deleting" = cancelling.** There is no hard delete; transition the
   entity to `CANCELLED` to retire it.
 - **Terminal statuses are one-way and freezing.** `CANCELLED` and
