@@ -219,7 +219,7 @@ trade-offs and alternatives considered; diagram the architecture; include the
 contracts and the key code where they clarify; call out failure modes and how
 they're handled. Cite relevant ADRs and source tickets.
 
-**Keep out — two things that creep into designs and don't belong.**
+**Keep out — three things that creep into designs and don't belong.**
 
 - **Delivery or build status.** A design describes the intended
   architecture, not how far it has been built. No "not built", "shipped",
@@ -234,6 +234,16 @@ they're handled. Cite relevant ADRs and source tickets.
   implementation pointer that goes stale, not a source of the design. (Naming
   a specific file *inside the body* to pin a mechanism is fine — the
   prohibition is on the sources line.)
+- **Open questions you never asked.** An "Open questions" section is the
+  easiest place to park a decision instead of making one, and it's designs
+  that attract them. Before any such question goes into the document, **ask
+  the user driving you** — most are answerable in a sentence, and the answer
+  belongs in the design as a decision, not in a list of things nobody
+  decided. Collect them and ask in one batch rather than trickling them out.
+  A question survives into the entity only when the user couldn't resolve it
+  either — then it's a real record of an undecided point, and say whose call
+  it's waiting on. Writing a design "with open questions to follow up" without
+  having put them to the user first is not allowed, however tidy the list looks.
 
 ---
 
@@ -269,6 +279,11 @@ architecture that isn't already in the design.
   Spexd lifecycle status field (managed via `transitionEntityStatus`), not in
   the body — no "Status:" line, no "shipped / planned / rejected" labels in the
   prose. Describe what the entity *is*, not what state it's in.
+- **Resolve open questions with the user before writing them down.** This
+  bites hardest in designs (see *Design → Keep out*) but holds for every
+  entity: an unanswered question in an entity's body is a decision you didn't
+  make and didn't ask about. Put it to the user first; only what they also
+  couldn't settle stays in the document as an open question.
 - **Cite sources as links.** Lead with a sources line — Linear URLs for
   tickets, repo links or paths for ADRs — so a reader can navigate straight
   to the source; quote key phrases where they capture intent.
@@ -419,6 +434,9 @@ architecture that isn't already in the design.
    altitude lens above before the first create call. When a source mixes
    levels (a ticket that states a capability *and* how it's built), split it:
    the capability goes up the chain, the mechanism waits for Design.
+   Research surfaces gaps the sources don't close — keep a list of them and
+   **put them to the user in one batch before you start writing**, so the
+   answers land in the entities as decisions instead of as open questions.
 2. **Check for an existing home** (`listFeatures`, then `listChildren` —
    which lists any entity's direct children by `reference` alone: a feature's
    requirements, a requirement's designs, a design's tasks; acceptance
