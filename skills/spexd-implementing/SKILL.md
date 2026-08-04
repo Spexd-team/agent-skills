@@ -154,7 +154,13 @@ accepted; the server rejects illegal or system-only moves):
   implementation `LOCKS` the whole ancestor chain, freezing the spec you're
   building against — which is exactly what you want.
 - **`IMPLEMENTATION_STARTED → PR_RAISED`** — when the work moves into PR review.
-  Reference the PR from the task so code and spec stay linked.
+  Reference the PR from the task so code and spec stay linked. **Always title the
+  PR `{reference}: {title}`** — the task's bare reference, a colon and a space,
+  then the change description, e.g. `TASK-12: Implement POST /api/rides`. Never
+  raise a PR for Spexd-tracked work without the reference leading the title: it's
+  what lets a reviewer trace a PR back to its spec from the PR list alone, and
+  what the Spexd–GitHub link keys off. Keep it a plain unlinked reference (a PR
+  title is plain text) — the markdown link goes in the description.
 - **`→ COMPLETED`** is **system-driven** on PR merge — you do not set it by hand.
 
 Never edit the task's *content* to record status ("done", "in progress") — status
@@ -212,7 +218,8 @@ server-side; don't try to route around it).
    coding.
 5. `transitionEntityStatus` → `IMPLEMENTATION_STARTED`.
 6. Implement to the design and the task's definition-of-done; satisfy every AC.
-7. Raise the PR; `transitionEntityStatus` → `PR_RAISED`; link the PR back, and
+7. Raise the PR, titled `{reference}: {title}` (e.g. `TASK-12: Implement POST
+   /api/rides`); `transitionEntityStatus` → `PR_RAISED`; link the PR back, and
    link the task (and any entity you cite) from the PR description.
 8. If the design proved wrong or incomplete, report it (or fix the *design* via
    authoring) — don't let the code and the spec diverge.
