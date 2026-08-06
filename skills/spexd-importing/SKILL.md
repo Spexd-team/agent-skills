@@ -45,9 +45,10 @@ grounding, and fan-out.
 
 2. **Everything lands in DRAFT.** An import is a *proposal* for humans to
    review, not an approved spec. `create*` raises entities in `DRAFT` by
-   default — so simply create and stop. Do **not** call `transitionEntityStatus`
-   to advance entities toward review/approval; leaving them in `DRAFT` is
-   the point. (Approval is a human-only action regardless.)
+   default — so simply create and stop. Do **not** call
+   `transitionEntityStatuses` to advance entities toward review/approval;
+   leaving them in `DRAFT` is the point. (Approval is a human-only action
+   regardless — an agent cannot move anything to `APPROVED` even if it tries.)
 
 ## The shape of an import
 
@@ -93,8 +94,9 @@ everything else hangs off.
    passing `projectRefs: [<projectRef>]` so it links on creation (or
    `addFeatureToProject` after). Write each feature body in product language per
    `spexd-authoring` (overview, goals/non-goals, persona, scope, a `**Sources:**`
-   line pointing at the files/docs that evidence it). Check `listFeatures` /
-   `listProjectFeatures` first to avoid duplicating an existing home.
+   line pointing at the files/docs that evidence it). Check `listProjects` and
+   `listFeatures` / `listProjectFeatures` first to avoid duplicating an existing
+   home — a partial import of the same system may already be there.
 
 Capture the returned `featureRef` for every feature — those are the fan-out
 work items for Phase 2.
@@ -146,12 +148,19 @@ another feature, place it there rather than duplicating.
 
 ## Phase 4 — Design across the requirements (orchestrator)
 
-Designs are the first level where implementation lives, and the **AC↔Design
-link is many-to-many** — one design can satisfy ACs across several requirements
-and even several features (shared infrastructure), and one AC can need several
-designs (e.g. a frontend and a backend design). So design **after** the fan-out,
-with a view of the whole chain, and split designs along **architectural seams**,
-not one-per-requirement.
+Designs are the first level where implementation lives. **A design's structural
+parent is its requirement** — `createDesign` takes a `requirementRef` — and it
+fulfils only **that requirement's** acceptance criteria; coverage never crosses
+a requirement boundary. Within a requirement the AC↔Design link is
+many-to-many: one design can satisfy several of its ACs, and one AC can need
+several designs (e.g. a frontend and a backend design).
+
+So an architectural seam that genuinely serves several requirements becomes a
+design under **each** of them, not one design linked across all of them. Design
+still happens **after** the fan-out, with a view of the whole chain — that view
+is what tells you a seam recurs, and keeps the sibling designs describing one
+mechanism consistently rather than three agents inventing three accounts of it.
+Split along **architectural seams**, not one-per-requirement by reflex.
 
 1. **Re-read the real architecture** — this is where you *do* name the actual
    stack, because Design is where detail belongs and because an import must
@@ -159,18 +168,23 @@ not one-per-requirement.
    services, data stores, auth boundary, background processing, external
    integrations, the client(s). The sub-agents' "architectural seams" notes from
    Phase 3 are a starting list.
-2. **Create one design per seam**, each grounded in the codebase: state the
-   mechanism as it actually exists (or is clearly intended) — data model,
-   contracts, key flows, failure handling, trade-offs — citing the files/ADRs
-   that evidence it in a `**Sources:**` line. Do **not** invent architecture the
-   code doesn't support; where the code is silent on something an AC needs, note
-   the gap rather than fabricating a mechanism.
-3. **Link designs to the ACs they fulfil** across every feature, so each
-   requirement's acceptance criteria are covered by at least one design. Use the
-   `getOutstandingWorkForEntity` / `listAcceptanceCriteria` views to confirm no
-   AC is left without a design. (Tasks are out of scope for an import
-   — leave decomposition to `spexd-authoring`/`spexd-implementing` once humans
-   have reviewed.)
+2. **Create one design per seam per requirement it serves**, each grounded in
+   the codebase: state the mechanism as it actually exists (or is clearly
+   intended) — data model, contracts, key flows, failure handling, trade-offs —
+   citing the files/ADRs that evidence it in a `**Sources:**` line. Do **not**
+   invent architecture the code doesn't support; where the code is silent on
+   something an AC needs, note the gap rather than fabricating a mechanism.
+3. **Link designs to the ACs they fulfil**, so each requirement's acceptance
+   criteria are covered by at least one design. The cheapest route is
+   `createDesign`'s `acceptanceCriteriaRefs`, which records coverage as the
+   design is created; afterwards it's `addDesignCoverage` (one criterion, by
+   `requirementRef` + `criterionRef`) or `replaceDesignCoverage` (the whole set
+   at once). Coverage is a pure structural write — it rolls no version and
+   moves nothing in the chain. To confirm nothing is uncovered, page
+   `listAcceptanceCriteria` for each requirement and look for a criterion with
+   an empty `fulfilledBy`. (Tasks are out of scope for an import — leave
+   decomposition to `spexd-authoring`/`spexd-implementing` once humans have
+   reviewed.)
 
 You may fan out this phase too (a sub-agent per architectural seam), but keep
 the *linking* coherent from the orchestrator so the many-to-many wiring is
@@ -190,7 +204,7 @@ consistent.
   for a candidate, say so in the body or leave it out — don't manufacture
   detail to fill the shape.
 - **Everything DRAFT, no transitions.** Reiterated because it's easy to slip:
-  `create*` is enough; never call `transitionEntityStatus` during an import.
+  `create*` is enough; never call `transitionEntityStatuses` during an import.
 - **MCP surface** (see `spexd-authoring` for the full editing/publishing model):
   entities are created with `create*`; edited by reading with `readDocument`
   and sending **every** change for that document as one `editDocument` call
@@ -208,7 +222,21 @@ consistent.
   response and never invent them. A bare reference resolves on its own, so
   reading one back needs nothing else — `getEntity` (or `getEntities` for a
   batch), and the document tools and `listChildren` alike. Only writes name a
-  parent, as `createRequirement` takes a `featureRef`.
+  parent: `createRequirement` takes a `featureRef`, `createDesign` a
+  `requirementRef`, `createTask` a `designRef`.
+- **`getEntity` never returns a body.** It and every other entity response are
+  content-free — metadata, `viewUrl` and the ancestor chain only. When you need
+  to read back what an entity actually says (checking a sub-agent's work, say),
+  that is `readDocument`, which takes up to 10 references at once.
+- **A diagram beats a paragraph for an architectural seam.** Upload it with
+  `createAttachmentUpload` — a two-step protocol that does *not* transfer the
+  file: mint a ticket with the file's size and SHA-256, POST the bytes with the
+  `curl` command it returns, then embed the resulting URL in the design's
+  markdown. Never inline the bytes or read the file into context.
+- **Link the repository you imported from.** `listGitHubConnections` lists the
+  repositories connected to the org, and `linkEntityRepository` attaches one to
+  a feature (or any entity) by its `github_repo_id` — so a reviewer of the
+  import can see which codebase each feature was reverse-engineered from.
 
 ## Process checklist
 
@@ -224,8 +252,12 @@ consistent.
 5. **Design** across the requirements along architectural seams, grounded in the
    real codebase; link each design to the ACs it fulfils; confirm every AC is
    covered.
-6. **Verify** the chain (`listProjectFeatures`, then `listChildren` at each level
-   down — feature → requirement → acceptance criterion → design):
-   every entity is `DRAFT`, nothing was transitioned, no implementation detail
-   leaked above Design, and nothing was invented beyond the AC exception. Report
-   the project and references created for human review.
+6. **Verify** the chain: `listProjectFeatures`, then `listChildren` at each
+   level down — feature → requirement → design (acceptance criteria are not a
+   chain level, so list them per requirement with `listAcceptanceCriteria`,
+   which also shows each criterion's `fulfilledBy` coverage). Confirm every
+   entity is `DRAFT`, nothing was transitioned, no implementation detail leaked
+   above Design, and nothing was invented beyond the AC exception. `listInbox`
+   with `view: "drafts"` is the fastest whole-org check that nothing escaped
+   `DRAFT`. Report the project and references created for human review, each as
+   a link on its `viewUrl`.
