@@ -200,11 +200,20 @@ boundaries, the concurrency and failure handling, the external services — is
 incomplete. Screen layout can be part of a design, but it is never the whole
 of one.
 
-**The AC↔Design link is many-to-many** (the only fan-out/fan-in point in the
-chain). One design can fulfil several ACs (shared infrastructure), and one AC
-can need several designs (a frontend design *and* a backend design each cover
-part of it). So split designs along **architectural seams**, not one-per-AC
-by reflex.
+**A design's structural parent is its requirement.** `createDesign` takes a
+`requirementRef`, and the owning feature comes from it. A design fulfils only
+**its own requirement's** acceptance criteria — `addDesignCoverage` rejects a
+criterion owned by any other requirement, and `moveEntity` onto a different
+requirement drops the coverage the design can no longer hold (returned as
+`droppedCoverage`, so you can see what the move cost).
+
+Within that requirement **the AC↔Design link is many-to-many** (the only
+fan-out/fan-in point in the chain). One design can fulfil several of its
+requirement's ACs, and one AC can need several designs (a frontend design *and*
+a backend design each cover part of it). So split designs along **architectural
+seams**, not one-per-AC by reflex. Shared infrastructure serving several
+requirements is a design under each — coverage never crosses a requirement
+boundary.
 
 **Design vs the levels above.** If you're naming a technology, drawing an
 architecture diagram, choosing between approaches, or writing code — you're in
@@ -217,7 +226,9 @@ decision already made. Don't decompose a design into a checklist of work here
 **How to write a good one.** State the decision and the mechanism; show the
 trade-offs and alternatives considered; diagram the architecture; include the
 contracts and the key code where they clarify; call out failure modes and how
-they're handled. Cite relevant ADRs and source tickets.
+they're handled. Cite relevant ADRs and source tickets. A diagram is an image
+in the body — upload it with `createAttachmentUpload` (see *Operational notes*)
+and embed the returned URL, rather than settling for ASCII art.
 
 **Keep out — three things that creep into designs and don't belong.**
 
@@ -276,7 +287,7 @@ architecture that isn't already in the design.
   heading just duplicates it. Begin the body with the sources line (below),
   then the content.
 - **Don't indicate status in the content.** An entity's state lives in its
-  Spexd lifecycle status field (managed via `transitionEntityStatus`), not in
+  Spexd lifecycle status field (managed via `transitionEntityStatuses`), not in
   the body — no "Status:" line, no "shipped / planned / rejected" labels in the
   prose. Describe what the entity *is*, not what state it's in.
 - **Resolve open questions with the user before writing them down.** This
@@ -297,24 +308,31 @@ architecture that isn't already in the design.
   not as plain text:
 
   ```markdown
-  satisfies [DES-9](https://www.spexd.com/feature/FEAT-3/REQ-7/DES-9)
+  satisfies [DES-9](https://www.spexd.com/e/DES-9)
   ```
 
-  `getEntity` / `getEntities`, `listFeatures`, `listChildren` and
-  `searchEntities` all return `viewUrl` alongside the reference — take the URL
-  from the response rather than composing one yourself, and if you don't have
-  it, read the entity rather than guessing. Two tools don't return it:
+  **An entity's address is its bare reference under `/e/`**, not a positional
+  path: a reference is org-unique, so `/e/DES-9` locates it and the navigator
+  derives the ancestors itself. The older positional form
+  (`/feature/FEAT-3/REQ-7/DES-9`) still redirects, but don't write new links in
+  it.
+
+  `getEntity` / `getEntities`, `listFeatures`, `listChildren`,
+  `searchEntities`, `listInbox`, `resolveEntityReferences` and
+  `resolveGitHubBranch` all return `viewUrl` alongside the reference — take the
+  URL from the response rather than composing one yourself, and if you don't
+  have it, read the entity rather than guessing. Two tools don't return one:
   `readDocument` (keep the link from whichever tool surfaced the entity) and
-  `getOutstandingWorkForEntity`, whose items carry a `path` array that *is* the
-  URL — `https://www.spexd.com/feature/` + the segments joined with `/`. That
-  `path` is optional and dropped whenever an ancestor link is missing; when
-  it's absent, pass the item's `reference` to `getEntity` and take the
-  `viewUrl` from there rather than composing a partial path.
+  `getOutstandingWorkForEntity`, whose items are addressed by their own
+  `reference` like anything else. Those items also carry an optional `path`
+  array of the ancestor chain; it is dropped when an ancestor link is broken,
+  so read its absence as "this row's chain is broken" rather than as the
+  address being unavailable.
 
   An acceptance criterion is the one exception: its reference is numbered
   within its requirement, so `AC-3` is not addressable on its own and is
   linked as a query on its requirement's URL —
-  `[AC-3](https://www.spexd.com/feature/FEAT-17/REQ-4?ac=AC-3)`.
+  `[AC-3](https://www.spexd.com/e/REQ-4?ac=AC-3)`.
 
   A bare `AC-3` or `DES-9` makes the reader go and find it. Link it.
 - **For features and requirements**, a useful body shape is: `## Overview`
@@ -327,13 +345,29 @@ architecture that isn't already in the design.
 
 ## Operational notes (MCP surface)
 
+- **`readDocument` is the only way to get a body at all.** Every other tool —
+  `getEntity`, `getEntities`, `listChildren`, the `create*` tools, the publish
+  and transition responses — is **content-free**: it carries the entity's
+  metadata (type, status, owning feature, `viewUrl`, ancestors) and never its
+  document. So don't reach for `getEntity` to "read" an entity; it tells you
+  where a thing sits, not what it says.
+  - It reads the **live draft** by default, unpublished edits included, which
+    is what you want before editing. Pass `version` to read the record
+    instead: `"latest-published"`, or a version number.
+  - It **batches 1–10 references**, and every entry carries a whole body — so
+    name the few documents you actually need rather than sweeping a subtree.
+  - It is the one document tool allowed on a frozen (`LOCKED` / `COMPLETED` /
+    `CANCELLED`) entity; `searchDocument`, `editDocument` and publishing are
+    all refused there. Treat what you read as reference material.
+  - It also returns `commentThreads` — every open and resolved thread, each
+    with its `threadId`, status, anchored text and a `location.handle` you can
+    pass straight to an `editDocument` op's `target.handle` without searching.
 - **Editing is targeted and batched, not whole-document.** Entities are
   edited through the live-document tools, never by submitting a full body.
-  Read first — `readDocument` (the live draft; it may be ahead of the
-  published version `getEntity` returns) — then send **every** change for
-  that document as a single `editDocument` call carrying an ordered `ops`
-  array (1–50). Explicitly *not* one call per change. Your edits appear live
-  to anyone editing the entity and merge with their concurrent changes.
+  Read first, then send **every** change for that document as a single
+  `editDocument` call carrying an ordered `ops` array (1–50). Explicitly *not*
+  one call per change. Your edits appear live to anyone editing the entity and
+  merge with their concurrent changes.
   - **Target by text first.** An op names where it acts with `target.find`:
     the exact text to act on, which must occur **exactly once** in the
     document — include surrounding words when a short phrase repeats.
@@ -402,15 +436,41 @@ architecture that isn't already in the design.
   requirement's criteria and match on title. A delete carries no `criterion`,
   having written no row. A frozen requirement is rejected with a 409 at the
   confirm.
+- **Design coverage is a separate, cheap write.** Which ACs a design fulfils
+  is *not* part of its document and does not roll a version or move it in the
+  chain. Set it at creation with `createDesign`'s `acceptanceCriteriaRefs`, or
+  afterwards with `addDesignCoverage` / `removeDesignCoverage` (one criterion
+  at a time, idempotent) or `replaceDesignCoverage` (the whole set at once; an
+  empty array clears it). Read it back with `getDesignCoverage`. Because a
+  criterion's `AC-n` is numbered within its requirement, every one of these
+  names the criterion as `requirementRef` + `criterionRef`, never `AC-3`
+  alone — and the requirement must be the design's own.
+- **Two views answer "is this covered?"** — `listAcceptanceCriteria` on a
+  requirement returns each criterion with `fulfilledBy` (the designs that
+  fulfil it), and `listDesignsForRequirement` gives the same relation from the
+  other side, deduplicated. Use the first to find an AC with no design.
 - **Renaming**: pass the optional `title` on the `publishDocument` *propose*
   call — not on the confirm — to rename an entity alongside publishing.
-- **Status transitions**: `transitionEntityStatus` moves any entity through
-  the lifecycle (e.g. `DRAFT → CANCELLED`, `DRAFT → READY_FOR_REVIEW`) — one
-  tool for every kind, addressed by the bare reference. Only legal manual
+- **Status transitions are a batch.** `transitionEntityStatuses` moves a
+  **set** of entities through the lifecycle (e.g. `DRAFT → READY_FOR_REVIEW`,
+  `DRAFT → CANCELLED`) — one tool for every kind, taking 1–25
+  `{ reference, targetStatus }` pairs, each addressed by the bare reference.
+  There is no singular `transitionEntityStatus`; raising ten drafts for review
+  is one call, not ten. Every subject is decided on its own against the state
+  machine: those that move come back under `transitioned`, and each one the
+  machine refuses comes back under `failed` with its reason — so **check
+  `failed`**, an illegal move doesn't fail the call or discard the legal moves
+  batched with it. (A malformed reference, or the same reference twice, does
+  reject the whole call before anything is written.) Only legal manual
   transitions are accepted; illegal moves and system-driven statuses are
-  rejected.
-- **"Deleting" = cancelling.** There is no hard delete; transition the
-  entity to `CANCELLED` to retire it.
+  rejected, and **approving is human-only** — an agent can never move anything
+  to `APPROVED`.
+- **"Deleting" = cancelling, and it cascades.** There is no hard delete;
+  transition the entity to `CANCELLED` to retire it. Cancelling is a
+  soft-delete — the entity is hidden from the app UI but API and MCP reads
+  still return it — and it **carries its descendants down with it**, returned
+  as `cancelledDescendants` on the transition. Cancelling a feature therefore
+  retires its whole subtree; check what you're about to take with you.
 - **Terminal statuses are one-way and freezing.** `CANCELLED` and
   `COMPLETED` have no outgoing transitions, and they freeze content *and*
   title — publish is rejected once there. So when retiring an entity,
@@ -426,6 +486,34 @@ architecture that isn't already in the design.
   just the propose — makes those edits permanently impossible.
 - References are server-generated; never invent or assume the next number —
   read it from the create response.
+- **Images and attachments are a two-step upload.** `createAttachmentUpload`
+  does **not** transfer the file: compute the size and SHA-256 locally, call it
+  to mint a one-shot ticket, then POST the bytes yourself with the `curl`
+  command it hands back — never read the file into context or inline it as
+  base64. Embed the returned absolute URL in the markdown (`![alt](url)` for an
+  image, `[label](url)` otherwise). Tickets are single-use; mint a fresh one to
+  retry.
+- **Comments are how you talk about an entity without editing it.** Start a
+  thread with `createCommentThread` — anchored by `quotedText` (an exact span
+  occurring exactly once) or document-level when omitted — and reply with
+  `addComment`. Read them with `listCommentThreads`, or fetch just the ones you
+  care about by id with `getCommentThreads` (the `threadId`s come from
+  `readDocument`, which already tells you each thread's status and location, so
+  settled threads need never be fetched). Comments never change content and are
+  accepted on an entity in any status. **Resolving, reopening or deleting a
+  thread is human-only** — an agent may take part in a discussion but never
+  close one down.
+- **The record is readable.** `listVersions` gives an entity's timeline newest
+  first — published versions interleaved with status transitions, approval
+  decisions and approval retirements, each entry tagged with its `kind`, and
+  each version carrying a `precis` of what it changed. It is **cursor**-paged:
+  pass back the `nextCursor`, never compose one. `compareVersions` answers what
+  changed between two published versions directly, so you never read both and
+  diff them yourself.
+- **Inline `:entityRef{reference=REQ-31}` directives** in a body you read back
+  are cross-references whose labels resolve at read time. Batch them through
+  `resolveEntityReferences` to get their current title, status and `viewUrl` —
+  a renamed entity needs no edit to the documents referencing it.
 
 ## Process
 
@@ -437,17 +525,23 @@ architecture that isn't already in the design.
    Research surfaces gaps the sources don't close — keep a list of them and
    **put them to the user in one batch before you start writing**, so the
    answers land in the entities as decisions instead of as open questions.
-2. **Check for an existing home** (`listFeatures`, then `listChildren` —
-   which lists any entity's direct children by `reference` alone: a feature's
-   requirements, a requirement's designs, a design's tasks; acceptance
-   criteria are not a chain level, so list those with `listAcceptanceCriteria`)
-   before creating, to avoid duplicates.
-3. **Create top-down.** Feature first, then its requirements
-   (`createRequirement` needs the `featureRef` from the create response),
-   then acceptance criteria under each requirement — each a two-call step,
-   `createAcceptanceCriterion` to propose and `confirmPublish` to write —
-   then designs against the ACs (remember one design may satisfy several
-   ACs), then tasks under each design.
+2. **Check for an existing home** before creating, to avoid duplicates.
+   `searchEntities` is the fastest first look — typo-tolerant full text across
+   every entity, filterable by `types`, `statuses` and `feature`. Then walk
+   structurally: `listFeatures` (optionally filtered to a project, or `"none"`
+   for the unassigned), then `listChildren`, which lists any entity's direct
+   children by `reference` alone — a feature's requirements, a requirement's
+   designs, a design's tasks. Acceptance criteria are not a chain level, so
+   list those with `listAcceptanceCriteria`; a project is not a chain parent,
+   so list its features with `listProjectFeatures`.
+3. **Create top-down.** Feature first (`createFeature`, optionally with
+   `projectRefs`), then its requirements (`createRequirement` needs the
+   `featureRef` from the create response), then acceptance criteria under each
+   requirement — each a two-call step, `createAcceptanceCriterion` to propose
+   and `confirmPublish` to write — then designs under each requirement
+   (`createDesign` takes the `requirementRef`, plus `acceptanceCriteriaRefs`
+   for the criteria it fulfils, which must be that requirement's own), then
+   tasks under each design (`createTask` takes the `designRef`).
 4. **Move wording, don't duplicate.** When extracting a lower-level entity
    from a higher one (a requirement out of a feature, an AC out of a
    requirement), remove the moved text from the parent's draft — naturally a
@@ -456,8 +550,11 @@ architecture that isn't already in the design.
    (propose, review the cascade, confirm). Spexd links the child to its
    parent automatically, so there's no need to list or point to it from the
    parent body.
-5. **Verify at the end.** Walk the chain (`listFeatures` → `listChildren`
-   at each level down) and confirm the created set matches the
-   plan and that no implementation detail leaked above Design; report what was
-   created and anything cancelled — each as a **link** (`viewUrl`) on its
-   reference, with its title, never a bare list of references.
+5. **Verify at the end.** Walk the chain (`listFeatures` → `listChildren` at
+   each level down, plus `listAcceptanceCriteria` on each requirement) and
+   confirm the created set matches the plan, that every AC has a design against
+   it (`fulfilledBy`), and that no implementation detail leaked above Design.
+   `listInbox` is the quick cross-cutting check that everything landed in the
+   status you expected. Report what was created and anything cancelled — each
+   as a **link** (`viewUrl`) on its reference, with its title, never a bare
+   list of references.
