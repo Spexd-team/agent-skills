@@ -17,6 +17,16 @@ A mature feature drifts in a specific way: the code moves forward, and the spec 
 
 Everything in a mature feature tends to read `APPROVED`, including requirements with zero implementation and designs that describe a table dropped two migrations ago. Status tells you a human signed off once, at some version, on some content. It is not evidence. Every verdict must come from reading the source and the tests.
 
+There is exactly one status that decides something, and it decides scope rather than verdict.
+
+## `CANCELLED` entities are not in the audit at all
+
+Cancelling is Spexd's soft delete: the entity is hidden from the app UI, but API and MCP reads still return it, so it will arrive in your `listChildren` and `readDocument` results looking like any other requirement or design. It is retired work. Someone decided it does not belong to the feature any more, and auditing it produces findings about spec nobody intends to honour.
+
+So drop it, and drop everything under it — cancelling carries its descendants down with it, so a cancelled requirement takes its criteria and designs with it whether or not their own status says so. Filter on the status field as you walk the tree, before you read a single body: never verdict a criterion beneath a cancelled parent, never sort a cancelled design for accuracy, and never let either reach the report — not in a section, not in a table row, and above all not in the verdict counts. A count inflated by retired criteria misstates the health of the feature, which is the one number the reader most trusts.
+
+The only acceptable mention is a single line noting how many cancelled entities you excluded, and only if there were enough that a reader comparing your report against the tree in the UI would otherwise wonder what happened to them. If a cancelled entity is genuinely load-bearing — a live criterion's `fulfilledBy` points at a cancelled design, say — that is a finding about the *live* entity's dangling reference, reported there.
+
 ## Gather the chain first, completely
 
 Pull the whole tree before auditing anything. Judging one requirement in isolation makes you miss the cross-references that produce the best findings — a criterion under one requirement that duplicates one under another, or a design that was superseded by a sibling.
@@ -24,11 +34,11 @@ Pull the whole tree before auditing anything. Judging one requirement in isolati
 Use the Spexd MCP tools:
 
 - `getEntity(FEAT-n)` and `readDocument([FEAT-n])` — the feature's own body drifts too, and it is the last thing anyone rereads.
-- `listChildren(FEAT-n, pageSize: 100)` — the requirements.
+- `listChildren(FEAT-n, pageSize: 100)` — the requirements. Discard the `CANCELLED` ones here, and don't descend into them.
 - `readDocument([...])` for the requirement bodies. **Batch 5–6 at a time**; larger batches overflow and get spilled to a file you then have to re-read.
-- `listAcceptanceCriteria(requirementRef, pageSize: 100)` for each requirement — one call each, they parallelise well. Note each criterion's `fulfilledBy`.
-- `listChildren(requirementRef, pageSize: 100)` for each requirement — the designs.
-- `readDocument([...])` for every design, again in small batches.
+- `listAcceptanceCriteria(requirementRef, pageSize: 100)` for each surviving requirement — one call each, they parallelise well. Note each criterion's `fulfilledBy`.
+- `listChildren(requirementRef, pageSize: 100)` for each surviving requirement — the designs. Discard the cancelled ones again; a live requirement can have cancelled designs beneath it.
+- `readDocument([...])` for every remaining design, again in small batches.
 
 If a `readDocument` result is spilled to a file, split it into per-reference files with a short Python one-liner rather than reading the whole blob back — you will want to grep individual designs later anyway.
 
@@ -112,6 +122,8 @@ If the audit runs to more than a couple of requirements, publish it as an Artifa
 
 ## Scope
 
-Audit the whole feature unless the user names a narrower scope. If they ask about one requirement, still pull its siblings' criteria, because duplicated and superseded criteria only show up in comparison — then report on the one they asked about.
+Audit the whole live feature unless the user names a narrower scope — cancelled entities are outside every scope, including one the user names explicitly, because the entity they pointed at may have been retired since they last looked. Say so and stop rather than auditing it.
+
+If they ask about one requirement, still pull its siblings' criteria, because duplicated and superseded criteria only show up in comparison — then report on the one they asked about.
 
 Do not fix anything you find. The deliverable is the assessment; edits to criteria and designs are the user's call, and several of the findings will be decisions (enable the flag, or retire the criteria?) rather than tasks.
