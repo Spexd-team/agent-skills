@@ -5,7 +5,9 @@ description: >-
   and its full traceability chain (task → design → acceptance criteria →
   requirement → feature) via the Spexd MCP tools (mcp__Spexd__*), open by
   reporting the entity's link, title and a concise summary, build to that
-  spec, and reflect progress back onto the task's lifecycle status. Use when
+  spec, and reflect progress back onto the task's lifecycle status. Given a
+  parent entity instead — a feature, requirement or design — expand it into its
+  tasks, order them, and ship one branch and one PR per task. Use when
   asked to pick up, build, or ship work that is tracked in Spexd, or to turn a
   Spexd task into code. The complement of spexd-authoring: authoring writes the
   spec, implementing executes it without changing it.
@@ -32,7 +34,8 @@ from its design breaks traceability, which is the whole point of Spexd.
 
 - "Pick up TASK-12 and implement it."
 - "What's the next piece of outstanding work on FEAT-6, and build it."
-- "Turn this design's tasks into a PR."
+- "Implement DES-320" — a parent entity, which still gets built one task at a
+  time, a branch and a PR each.
 - Any request to build, ship, or code something that is tracked in Spexd.
 
 If instead you're being asked to *write or restructure the spec itself* — add a
@@ -62,11 +65,14 @@ context → build → reflect status.** Never skip straight from "find" to
   deepest thing named isn't a task — e.g. a branch naming only its feature),
   `ambiguous` (a tie, on `tied`), or `not_found`. A miss is an outcome, never
   an error, and the entities it did resolve come back either way.
-- **Given a feature/requirement/design and asked for "what's next"**, use
+- **Given a feature/requirement/design**, whether the ask is "what's next" or
+  "implement all of it", the unit of work is still the task. Use
   `getOutstandingWorkForEntity` — the bare reference, whichever of the three it
   is — to list the descendants whose status needs action, then `listChildren`
   on the design's reference to enumerate its tasks. Pick a task that is ready
-  to build (see status rules below).
+  to build (see status rules below); if you're building the whole parent, work
+  through its tasks one at a time as [Given a parent entity](#given-a-parent-entity-work-it-task-by-task)
+  describes.
 - **Asked for what's next with nothing to anchor on**, browse `listInbox`:
   the org-wide, status-filtered view of everything. Pick a `view` preset
   (`approved` is the one that lists work ready to build; also `all-work`,
@@ -170,10 +176,41 @@ it's meant to work before touching code.
   tasks that must land first. Code in the entities is quoted evidence of what
   already exists, not a draft to paste. Writing the implementation is your job,
   in the repository's own idiom and along the grain the design describes.
+- **Write code that explains itself, and comment only what it can't.** Names,
+  types and small well-cut functions carry the explanation; a comment restating
+  what the line below it does is noise, and it goes stale the first time
+  someone edits around it. Comments earn their place in two situations: a short
+  **file- or module-level** note saying what this unit is for and how it fits
+  with the rest, and a **line-level** note where the code is genuinely
+  ambiguous — a non-obvious invariant, a workaround and why it's needed, an
+  ordering or a constant that looks arbitrary but isn't. If a comment is
+  needed to explain *what* a block does, prefer renaming or extracting until it
+  isn't. Never narrate the change or restate the task in comments: no "added
+  for TASK-12", no changelog in the header. That belongs in the commit message
+  and the PR description, which is where the traceability already lives. Where
+  the repository requires documentation comments — public API docstrings,
+  generated docs, a linted comment style — its convention wins over this.
 - **Write the tests the task names**, including the regression cases it calls
   out. The design says which areas of testing prove its acceptance criteria; the
   task says which tests to add. A criterion with no assertion that fails when it
   stops holding is not implemented, however green the suite is.
+- **Annotate every test with the criterion it proves.** A test written to
+  satisfy an acceptance criterion names that criterion, in the form
+  `REQ-7/AC-5` — the owning requirement *and* the criterion, because an AC is
+  numbered within its requirement, so a bare `AC-5` names nothing on its own.
+  Put it wherever the repository already carries test metadata — normally the
+  test name or description string, otherwise a comment on the test:
+
+  ```ts
+  it('rejects a ride request with no payment method [REQ-7/AC-5]', async () => {
+  ```
+
+  List them all where one test covers several (`[REQ-7/AC-4, REQ-7/AC-5]`), and
+  leave the annotation off tests that don't map to a criterion — a unit test of
+  a helper or a regression guard the task called for is still worth writing;
+  don't invent an AC for it. This is what lets a reviewer, and later
+  `spexd-auditing`, get from a criterion to the assertion that proves it
+  without reading the whole suite.
 - **Land it whole.** A task is scoped to merge to `main` on its own without
   leaving dead paths — no half-wired screen or unreachable route. If you find
   you can't finish the slice that way, say so rather than merging the stranded
@@ -199,22 +236,32 @@ it's meant to work before touching code.
 A task carries an implementation sub-flow that the rest of the chain reads, so
 it must move as the work moves:
 
-- **`APPROVED → IMPLEMENTATION_STARTED`** — when building begins. (A task must
-  be `APPROVED` before implementation can start; if it isn't yet, it's not ready
-  to build — that's a spec/approval gap to raise, not to bypass.) Starting
-  implementation `LOCKS` the whole ancestor chain, freezing the spec you're
-  building against — which is exactly what you want.
+- **`APPROVED → IMPLEMENTATION_STARTED`** — **the moment work starts, and you
+  make this move yourself.** "Starts" means when you begin building: after
+  you've read the chain and decided this is the task, before the branch exists
+  and before the first edit. Don't wait for a branch push to trigger it — that
+  leaves the task sitting `APPROVED` while files are already changing, so
+  anyone reading Spexd sees the work as unclaimed when it isn't, and two agents
+  can pick up the same task. Transition it with `transitionEntityStatuses` as
+  the first act of building, then cut the branch. (A task must be `APPROVED`
+  before implementation can start; if it isn't yet, it's not ready to build —
+  that's a spec/approval gap to raise, not to bypass.) Starting implementation
+  `LOCKS` the whole ancestor chain, freezing the spec you're building against —
+  which is exactly what you want, and another reason to do it before you write
+  code rather than after.
 - **`IMPLEMENTATION_STARTED → PR_RAISED`** — when the work moves into PR review.
 - **`→ COMPLETED`** on PR merge. This one is **system-driven** and there is no
   manual route to it — never try to set it by hand.
 
-**Name the task in the branch and the PR, and the lifecycle mostly drives
-itself.** Where the repository is connected to Spexd, GitHub activity moves the
-task for you: a branch naming an `APPROVED` task moves it to
+**Name the task in the branch and the PR, and the rest of the lifecycle mostly
+drives itself.** Where the repository is connected to Spexd, GitHub activity
+moves the task for you: a branch naming an `APPROVED` task moves it to
 `IMPLEMENTATION_STARTED`, marking its PR ready for review moves it to
 `PR_RAISED`, and merging moves it to `COMPLETED` — and a hop that never fired
 (a PR opened ready with no branch event seen) is applied on the way rather than
-skipped. So the naming convention is not bookkeeping, it *is* the mechanism:
+skipped. The branch-push hop is a backstop for a move you should already have
+made by hand; the PR hops are the mechanism proper. So the naming convention is
+not bookkeeping:
 
 - **Put the reference in the branch name**, e.g.
   `claude/task-12-ride-request-endpoint`. A trailing slug is ignored and the
@@ -226,6 +273,16 @@ skipped. So the naming convention is not bookkeeping, it *is* the mechanism:
   the PR list alone, and what the Spexd–GitHub link keys off. Keep it a plain
   unlinked reference (a PR title is plain text) — the markdown link goes in the
   description.
+- **Exactly one task in the branch name, and exactly one in the PR title.**
+  Both name the task being built and nothing else — never a second task, never
+  the parent design, requirement or feature. `DES-320: add ride requests` is
+  wrong even when the branch really does implement the whole design; so is
+  `TASK-612 + TASK-613: schema and endpoint`. A branch or title naming a parent
+  resolves `out_of_scope`, and one naming two tasks is `ambiguous` — either
+  way, nothing moves. Every other entity goes in the **PR description**: link
+  the task, the design it executes, the acceptance criteria the change
+  satisfies, and the PR beneath it in the stack. The title is the address; the
+  body is the context.
 - **Check rather than assume.** The transitions ride on webhook delivery, so
   they can lag or, on an unconnected repository, never arrive.
   `listTaskPullRequests` shows the PRs Spexd has actually observed for a task,
@@ -246,6 +303,69 @@ Never edit the task's *content* to record status ("done", "in progress") — sta
 is the lifecycle field, not the prose. And approval is a **human-only** action:
 an agent can never approve a task or move anything to `APPROVED` (this is enforced
 server-side; don't try to route around it).
+
+## Given a parent entity: work it task by task
+
+**Implementation always happens at task level.** A feature, requirement or
+design is never itself a unit of work — it's a set of tasks plus the context
+that explains them, and only the task carries a definition of done, a
+repository, and the lifecycle GitHub drives. So when you're pointed at a parent
+("implement DES-320"), don't open one branch for the parent and land the whole
+thing in a single PR. Expand it into its tasks and ship them one at a time.
+
+**1. Enumerate the tasks.** `listChildren` on a design gives its tasks;
+`getOutstandingWorkForEntity` on a requirement or feature gives the descendants
+still needing action, from which you take the tasks — and the designs to expand
+in turn. Report the set back the way step 2 asks: link, title and a one-line
+summary for each.
+
+**2. Decide the order, and say it before you start.** Each task's
+`**Depends on:**` line — the first line of its body — names the tasks that must
+land first; read the bodies in one batched `readDocument` and let those lines
+drive the sequence. Where nothing blocks, order by what makes each PR
+reviewable on its own: schema and contracts before the code that uses them, the
+server before the client that calls it, the thing that can merge alone before
+the thing that needs it. State the order and the reasoning before cutting the
+first branch — it's cheap for a human to correct then and expensive once three
+PRs are open.
+
+**3. Stack the branches.** Branch the first task off `main`, build it, raise its
+PR. Branch the *second* task off the *first task's branch* — not off `main` —
+build it, and target its PR at the first branch. And so on down the chain. Each
+PR's diff is then exactly one task's change, reviewable without the reader
+having to mentally subtract the task before it:
+
+```
+main
+└── claude/task-612-ride-request-schema          → PR: base main
+    └── claude/task-613-ride-request-endpoint    → PR: base claude/task-612-…
+        └── claude/task-614-ride-status-webhook  → PR: base claude/task-613-…
+```
+
+Stack only where you have to. A task that doesn't build on the code of the ones
+before it can branch straight off `main` and be reviewed in parallel — a stack
+is for genuine dependency, not for tidiness, and every unnecessary link in it
+is one more PR that has to be merged in order.
+
+**4. One task's cycle at a time, PR raised before you move on.** For each task
+in turn, run the full loop: transition it to `IMPLEMENTATION_STARTED` as work
+starts, build it, raise its PR titled `{reference}: {title}`, and confirm it
+reached `PR_RAISED`. Then start the next. Don't batch the PRs up to the end —
+raising each as its task finishes is what lets review start on the earlier work
+while you build the later, which is the whole point of the stack.
+
+**5. Keep the stack honest as it merges.** When an earlier PR merges, GitHub
+repoints the PR stacked on it at the merged branch's base; merge or rebase down
+the stack so the later PRs keep showing only their own change. `listTaskPullRequests`
+tells you which PRs Spexd has actually observed for a task if a status looks
+stale.
+
+If a task partway down turns out to be unbuildable — its design is wrong, a
+dependency isn't done, the slice can't merge without dead paths — **stop at
+that task and surface it**. Don't skip it and stack the remaining tasks on the
+gap; the branch below it would then carry work whose foundation isn't agreed.
+Land what's already reviewable, say which task you stopped on and why, and
+raise the design problem the way step 4 of the loop describes.
 
 ## Operational notes (MCP surface)
 
@@ -305,7 +425,10 @@ server-side; don't try to route around it).
 
 ## Process checklist
 
-1. Resolve the task (by reference, or by finding outstanding work).
+1. Resolve the work (by reference, or by finding what's outstanding). If you
+   were given a parent, expand it into its tasks, order them by their
+   `**Depends on:**` lines and by what's reviewable alone, and state that order
+   — then run steps 2–8 once per task, stacking each branch on the last.
 2. Report it back first: **link (`viewUrl`) + title + concise summary**, before
    any plan or code.
 3. Confirm it's ready to build (`APPROVED`), and that nothing on its
@@ -314,13 +437,16 @@ server-side; don't try to route around it).
 4. Read the full ancestor chain (design → ACs → requirement → feature) before
    coding — one batched `readDocument` for the bodies, `getDesignCoverage` for
    the exact AC set you owe.
-5. Branch with the reference in its name; confirm the task reached
-   `IMPLEMENTATION_STARTED`, and `transitionEntityStatuses` it there yourself
-   if the GitHub automation didn't.
-6. Implement to the design and the task's definition of done; write the tests it
-   names and cover the regressions it calls out; satisfy every AC.
+5. `transitionEntityStatuses` the task to `IMPLEMENTATION_STARTED` as work
+   begins — before the branch, not after the push — then branch, with exactly
+   one task reference in the name.
+6. Implement to the design and the task's definition of done; let the code
+   explain itself and keep comments to file-level and genuinely ambiguous
+   points; write the tests it names, annotate each with the `REQ-x/AC-y` it
+   proves, cover the regressions it calls out, and satisfy every AC.
 7. Raise the PR, titled `{reference}: {title}` (e.g. `TASK-12: Implement POST
-   /api/rides`); confirm the task reached `PR_RAISED` (or transition it); link
-   the task and any entity you cite from the PR description.
+   /api/rides`) and naming that one task only; confirm the task reached
+   `PR_RAISED` (or transition it); link the task, its design and any other
+   entity or stacked PR from the description.
 8. If the design proved wrong or incomplete, report it (or fix the *design* via
    authoring) — don't let the code and the spec diverge.
