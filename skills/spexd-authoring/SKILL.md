@@ -29,6 +29,10 @@ you descend:
 | **Design** | *How do we build it so those conditions hold?* | Architecture & mechanism |
 | **Task** | *What work ships a slice of that design?* | Unit of work |
 
+Put crudely: **Feature and Requirement are the *what* and the *why*; Design and
+Task are the *how*.** Acceptance criteria sit on the hinge — still *what*, but
+stated precisely enough to be proved.
+
 ## The one rule that governs everything: detail only descends
 
 Implementation detail is introduced **at the Design level and nowhere
@@ -74,19 +78,41 @@ is a requirement/AC statement; "polls an H3 index every 5 seconds" is design.
 | Single testable pass/fail scenario | | | ✓ | | |
 | Measurable threshold (500 ms, ±10%) | goal-level | ✓ | ✓ | ✓ | ✓ |
 | Vendors / libraries / frameworks | ✗ | ✗ | ✗ | ✓ | ref |
-| Tables / columns / indexes | ✗ | ✗ | ✗ | ✓ | ref |
+| Data model, as a field/type/description table | ✗ | ✗ | ✗ | ✓ | ref |
+| Endpoints and contracts, as a table | ✗ | ✗ | ✗ | ✓ | ref |
 | Algorithms / data structures | ✗ | ✗ | ✗ | ✓ | ref |
-| Code / interfaces / HTTP contracts | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Security, configuration, deployment controls | ✗ | ✗ | ✗ | ✓ | ref |
+| Existing code, quoted as evidence of the approach | ✗ | ✗ | ✗ | ✓ | ✓ |
+| **New implementation code** | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Areas of testing that prove the covered ACs | ✗ | ✗ | ✗ | ✓ | ✓ |
 | Architecture diagram | ✗ | ✗ | ✗ | ✓ | |
 | Trade-offs / alternatives considered | ✗ | ✗ | ✗ | ✓ | |
-| Definition-of-done checklist | | | | | ✓ |
+| Definition of done, regressions, blocking tasks | | | | | ✓ |
 
 Each entity may **reference** the level above ("see FEAT-2", "satisfies
 AC-3" — always as a link to the entity, see *Content conventions*); none may
 pre-empt the level below. A requirement that already names
 the algorithm has done Design's job for it — and usually the wrong way.
 
----
+### The one thing that belongs at no level: the implementation itself
+
+Detail descends, but it stops short of the code. **No entity — not even a
+design or a task — contains the implementation code.** Writing that code is
+the work the design and the task exist to commission; an entity that already
+contains it has done the engineer's job for them, badly and without a compiler.
+
+The test is direction, not syntax: **could an engineer paste this into the
+repository as their implementation?** If yes, it doesn't belong. **Quoting code
+that already exists is a different act and is welcome** at the Design and Task
+levels — it is how a design shows the pattern it is conforming to and how a
+task points at the thing that has to change. So a five-line excerpt of today's
+repository layer, cited to its file, is good authoring; the new handler written
+out ready to paste is not.
+
+Where a contract or a schema needs pinning down precisely, express it as a
+**table** — field, type, description — not as a type declaration, migration or
+request body. That form is readable by the product members of the audience too,
+which is why designs use it (see *Design*).
 
 ## Feature
 
@@ -190,15 +216,23 @@ measurable outcomes over adjectives ("within 30 seconds", not "quickly").
 
 **What it is.** The first level where implementation lives — a technical
 design/decision that fulfils one or more acceptance criteria. This is where
-architecture, vendors, libraries, schemas, algorithms, state machines, HTTP
-contracts, code, and trade-offs are not just allowed but expected. It answers
-*how do we build this so the ACs hold?*
+architecture, vendors, libraries, data models, algorithms, state machines,
+contracts and trade-offs are not just allowed but expected. It answers *how do
+we build this so the ACs hold?* — while stopping short of writing the code that
+answer commissions.
 
 This is **architectural design, not merely UX.** A design that only describes
 screens and never the system beneath them — the data model, the transaction
 boundaries, the concurrency and failure handling, the external services — is
 incomplete. Screen layout can be part of a design, but it is never the whole
 of one.
+
+**Who reads it.** Two audiences at once: an engineer who will build from it,
+and a product member who will not. That is the reason the mechanism is written
+as prose and tables rather than as code — a data model given as field, type and
+purpose is legible to both, where a migration or a type declaration is legible
+to one. Write so a product reader can follow what the system does and why, and
+an engineer can tell what has to change.
 
 **A design's structural parent is its requirement.** `createDesign` takes a
 `requirementRef`, and the owning feature comes from it. A design fulfils only
@@ -216,22 +250,74 @@ requirements is a design under each — coverage never crosses a requirement
 boundary.
 
 **Design vs the levels above.** If you're naming a technology, drawing an
-architecture diagram, choosing between approaches, or writing code — you're in
-Design. Reference the ACs you satisfy; don't restate them in full.
+architecture diagram, tabulating a data model, or choosing between approaches —
+you're in Design. Reference the ACs you satisfy; don't restate them in full.
 
 **Design vs Task.** A design *decides* the approach; a task *executes* a
-decision already made. Don't decompose a design into a checklist of work here
-— that's the Task level.
+decision already made. A design describes the **target state of the
+capability**; a task describes **a change** that moves the code toward it. Don't
+decompose a design into a checklist of work here — that's the Task level.
 
-**How to write a good one.** State the decision and the mechanism; show the
-trade-offs and alternatives considered; diagram the architecture; include the
-contracts and the key code where they clarify; call out failure modes and how
-they're handled. Cite relevant ADRs and source tickets. A diagram is an image
-in the body — upload it with `createAttachmentUpload` (see *Operational notes*)
-and embed the returned URL, rather than settling for ASCII art.
+**Ground it in the code, and follow the grain.** A design is bound by code
+analysis: read the code that will host the capability before writing it, and
+reflect what you find. The point is not only accuracy but **conformance** — a
+design adopts the approach the codebase already takes. If business logic lives
+in the repository layer behind thin controllers, the design puts its logic in
+the repository layer; describing a logic-heavy controller instead is wrong here
+even where it would be defensible in a greenfield codebase. Quote the existing
+code where it pins the pattern down, and name the modules and layers involved.
 
-**Keep out — three things that creep into designs and don't belong.**
+Grounding a design in what exists does not turn it into a description of what
+exists. It still states the capability's target state in the timeless present
+(see *Keep out*) — never a diff, a migration path from today, or a note on how
+much of it is already built. Getting there is the Task's job.
 
+**What a good design covers.** Not every design needs every section — one that
+adds no data and no endpoint shouldn't invent them — but a section should be
+absent because it doesn't apply, not because nobody thought about it.
+
+- **The decision and the mechanism.** What is being built and how it works,
+  end to end, in enough detail that an engineer knows what has to change.
+- **Boundaries.** How the functionality splits across the system's seams —
+  services, layers, clients, and **repositories where more than one is
+  involved**. A design spanning three repos says which part lands in each; that
+  split is what its tasks decompose along. Link every repository it touches
+  with `linkEntityRepository` (see *Operational notes*).
+- **Data model.** Every entity it adds or changes, as a table — **field, type,
+  description/purpose** — one row per field. Human-readable types (`uuid`,
+  `timestamp`, `text`, `enum: draft | published`), not a schema dump.
+- **Contracts.** Endpoints, events and interfaces as a table — method and path
+  (or event name), purpose, request fields, response, error cases. Not a
+  request body pasted as JSON.
+- **Security controls.** Authentication and authorization, tenancy isolation,
+  which data is sensitive and how it is protected, what an untrusted caller can
+  and cannot reach.
+- **Configuration controls.** Flags, environment variables and settings the
+  behaviour depends on, their defaults, and who can change them.
+- **Deployment.** Rollout and migration ordering, backwards compatibility,
+  anything that has to ship or be enabled in a particular sequence.
+- **Failure modes** and how each is handled.
+- **Testing.** The areas of testing required to show the **acceptance criteria
+  this design covers** are met — each linked, and each answered with the *kind*
+  and *level* of test that would prove it (unit at this seam, integration
+  across that boundary, an end-to-end path), plus the edge and failure cases
+  that need their own coverage. Not test code, and not a restatement of the AC:
+  the useful sentence names what an assertion would have to fail on if the
+  criterion stopped holding.
+- **Trade-offs and alternatives considered**, and the ADRs and tickets behind
+  them.
+- **A diagram**, where the architecture is easier seen than read. A diagram is
+  an image in the body — upload it with `createAttachmentUpload` (see
+  *Operational notes*) and embed the returned URL, rather than settling for
+  ASCII art.
+
+**Keep out — four things that creep into designs and don't belong.**
+
+- **The implementation code.** A design commissions code; it doesn't contain
+  it. No handler, migration, type declaration or query written out ready to
+  paste — express the shape as a table instead. Quoting code that *already
+  exists*, cited to its file, is the opposite move and belongs here (see *The
+  one thing that belongs at no level*).
 - **Delivery or build status.** A design describes the intended
   architecture, not how far it has been built. No "not built", "shipped",
   "in progress", "landed in wave N", no "Status:" note, and no references to
@@ -262,21 +348,68 @@ and embed the returned URL, rather than settling for ASCII art.
 
 **What it is.** A concrete unit of implementation work decomposed from
 exactly one design. It answers *what does someone actually do to ship a slice
-of that design?* Ideally sized to a single reviewable change.
+of that design?* **Change-level and single-repository**: one reviewable change,
+in one codebase.
 
 **Task vs Design.** A task never decides architecture — it carries out what
-the design specified. If, mid-task, you discover the approach is wrong or
-under-specified, update the **design**, don't quietly invent new architecture
-in the task.
+the design specified. Where the design is the capability's target state, the
+task is the change that moves the code toward it. If, mid-task, you discover the
+approach is wrong or under-specified, update the **design**, don't quietly
+invent new architecture in the task.
 
-**How to write a good one.** An imperative title ("Implement `POST
-/api/rides`"), a clear **definition of done**, and a subtask checklist. Point
-back to the design it implements, as a link ("per [DES-9](…) — *Ride request
-creation & state machine*"). Code snippets are fine here — a task executes design-level
-decisions, so it inherits their implementation altitude.
+**One repository, and say which.** Link it with `linkEntityRepository` — a task
+carries **exactly one** repository, and linking a second replaces the first, so
+set it once at creation. A design that spans repositories decomposes into
+tasks along that boundary: one task per repository, never one task reaching
+across two.
+
+**Scope it so it can merge.** Size a task so that, once complete, it can be
+merged to `main` on its own **without leaving dead paths behind** — no
+half-wired screen, no route nothing reaches, no flag protecting an unfinished
+journey. If a slice of the design can't be merged safely alone, it is the wrong
+slice: redraw the boundary, or fold it into the task that completes the path.
+This constrains decomposition more than size does — prefer a larger task that
+lands whole over two that leave the UI stranded between them.
+
+**Blocking comes first.** If a task can't start until other tasks are complete,
+say so on the **first line of the body**, before the sources line and everything
+else, so ordering is visible without reading the task:
+
+```markdown
+**Depends on:** [TASK-14](https://www.spexd.com/e/TASK-14), [TASK-15](https://www.spexd.com/e/TASK-15)
+```
+
+Linked references, never bare. Omit the line entirely when nothing blocks the
+task — don't write "Depends on: none". This is a prose convention: a task has no
+dependency field, and it is unrelated to `listInbox`'s `blocked` view, which
+means *invalidated by an upstream publish*, not *waiting on a sibling task*.
+
+**How to write a good one.** An imperative title ("Implement the ride-request
+endpoint"). Like its design, a task is **bound by the code**: read what is
+there and be explicit about how it has to change. The bar is that an engineer
+can start from the task and its design without further analysis beyond
+verifying and understanding the existing code. Cover:
+
+- **What changes** — the modules, layers and files that have to change, and in
+  what way. Quote the existing code where it makes the change unambiguous.
+- **What good looks like** — the behaviour once the change lands, tied to the
+  acceptance criteria it serves.
+- **What tests should exist** — the tests to add or extend, and what each has
+  to assert. The design names the areas of testing; the task names the tests.
+- **Regressions to cover** — existing behaviour this change could break, and
+  what must keep passing. Call these out explicitly rather than trusting the
+  suite to notice.
+- **What finished looks like** — the definition of done and a subtask
+  checklist, including the merge-safety condition above.
+- **References** — the design it implements, as a link ("per [DES-9](…) —
+  *Ride request creation & state machine*"), and the acceptance criteria it
+  contributes to, linked in the `[AC-3](…/e/REQ-4?ac=AC-3)` form. Reference
+  them; don't restate them in full.
 
 **Keep out.** Don't re-argue the design; reference it. Don't introduce
-architecture that isn't already in the design.
+architecture that isn't already in the design. And **no implementation code** —
+quoting what exists to show what has to change is right; writing out the code
+the task exists to commission is not.
 
 ---
 
@@ -285,7 +418,8 @@ architecture that isn't already in the design.
 - **Don't repeat the title in the body.** The title is a separate field in
   Spexd, shown above the content — starting the body with an `# <Title>`
   heading just duplicates it. Begin the body with the sources line (below),
-  then the content.
+  then the content. A task with blockers is the one exception: its
+  `**Depends on:**` line comes first, above the sources line.
 - **Don't indicate status in the content.** An entity's state lives in its
   Spexd lifecycle status field (managed via `transitionEntityStatuses`), not in
   the body — no "Status:" line, no "shipped / planned / rejected" labels in the
@@ -340,8 +474,14 @@ architecture that isn't already in the design.
   Keep the mechanism out entirely rather than giving it a section — the "how"
   belongs in the Design entities the chain links automatically, not in a
   footnote on the feature or requirement. ACs are usually a single
-  Given/When/Then line; designs are full technical documents; tasks are a
-  definition of done plus a subtask checklist.
+  Given/When/Then line; designs are full technical documents written for
+  engineers and product readers alike; tasks state what changes, what good
+  looks like, what tests should exist and what finished looks like.
+- **Express structure as tables, not as code.** Data models, endpoint and event
+  contracts, configuration and permission matrices all read better — and to a
+  wider audience — as a table with a row per field and a plain-language
+  description than as a schema, type or payload. See *The one thing that
+  belongs at no level*.
 
 ## Operational notes (MCP surface)
 
@@ -449,6 +589,17 @@ architecture that isn't already in the design.
   requirement returns each criterion with `fulfilledBy` (the designs that
   fulfil it), and `listDesignsForRequirement` gives the same relation from the
   other side, deduplicated. Use the first to find an AC with no design.
+- **Set the repository on every design and task.** Where the work lives is a
+  field, not a sentence in the body. `listGitHubConnections` lists the
+  repositories connected to the org; `linkEntityRepository` attaches one by its
+  `github_repo_id`; `listEntityRepositories` reads back what an entity carries.
+  The cardinality mirrors the levels: **entities above a task accumulate any
+  number of repositories** — so a design that spans repos links each one it
+  touches — while **a task carries exactly one**, and linking another
+  *replaces* it rather than adding. Set it as you create the entity; a
+  design or task with no repository leaves an implementer guessing which
+  codebase to open. Features and requirements may carry them too, but for those
+  it's optional context rather than part of the spec.
 - **Renaming**: pass the optional `title` on the `publishDocument` *propose*
   call — not on the confirm — to rename an entity alongside publishing.
 - **Status transitions are a batch.** `transitionEntityStatuses` moves a
@@ -525,6 +676,10 @@ architecture that isn't already in the design.
    Research surfaces gaps the sources don't close — keep a list of them and
    **put them to the user in one batch before you start writing**, so the
    answers land in the entities as decisions instead of as open questions.
+   **Before any design or task, read the code as well.** Both levels are bound
+   by code analysis: find the modules and layers the capability will live in,
+   and learn the approach the codebase already takes there, so the design
+   conforms to the grain rather than describing a system this one isn't.
 2. **Check for an existing home** before creating, to avoid duplicates.
    `searchEntities` is the fastest first look — typo-tolerant full text across
    every entity, filterable by `types`, `statuses` and `feature`. Then walk
@@ -541,7 +696,11 @@ architecture that isn't already in the design.
    and `confirmPublish` to write — then designs under each requirement
    (`createDesign` takes the `requirementRef`, plus `acceptanceCriteriaRefs`
    for the criteria it fulfils, which must be that requirement's own), then
-   tasks under each design (`createTask` takes the `designRef`).
+   tasks under each design (`createTask` takes the `designRef`). **Link the
+   repositories as you go** — `linkEntityRepository` on every design (each repo
+   it touches) and every task (exactly one). Decompose a design into tasks along
+   its repository and merge-safety boundaries, and give any task that can't
+   start yet its `**Depends on:**` line.
 4. **Move wording, don't duplicate.** When extracting a lower-level entity
    from a higher one (a requirement out of a feature, an AC out of a
    requirement), remove the moved text from the parent's draft — naturally a
@@ -554,7 +713,10 @@ architecture that isn't already in the design.
    each level down, plus `listAcceptanceCriteria` on each requirement) and
    confirm the created set matches the plan, that every AC has a design against
    it (`fulfilledBy`), and that no implementation detail leaked above Design.
-   `listInbox` is the quick cross-cutting check that everything landed in the
-   status you expected. Report what was created and anything cancelled — each
+   Check the two things that are easy to leave half-done: **every design and
+   task carries its repository** (`listEntityRepositories`), and **no entity
+   contains implementation code** — an excerpt of existing code is fine, a
+   ready-to-paste implementation is not. `listInbox` is the quick cross-cutting
+   check that everything landed in the status you expected. Report what was created and anything cancelled — each
    as a **link** (`viewUrl`) on its reference, with its title, never a bare
    list of references.

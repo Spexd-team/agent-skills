@@ -170,10 +170,21 @@ Split along **architectural seams**, not one-per-requirement by reflex.
    Phase 3 are a starting list.
 2. **Create one design per seam per requirement it serves**, each grounded in
    the codebase: state the mechanism as it actually exists (or is clearly
-   intended) — data model, contracts, key flows, failure handling, trade-offs —
-   citing the files/ADRs that evidence it in a `**Sources:**` line. Do **not**
-   invent architecture the code doesn't support; where the code is silent on
-   something an AC needs, note the gap rather than fabricating a mechanism.
+   intended), citing the files/ADRs that evidence it in a `**Sources:**` line.
+   Follow `spexd-authoring`'s *What a good design covers* — the mechanism,
+   the boundaries (including which repositories are involved), the **data model
+   as a field/type/description table**, the contracts as a table, security,
+   configuration and deployment controls, failure modes, the areas of testing
+   that would prove the covered ACs, and the trade-offs. An import is the one
+   place where conformance is free: the codebase *is* the approach, so describe
+   the grain you find rather than the one you'd prefer. Quote existing code
+   where it pins a pattern down, but **never write implementation code into an
+   entity**, and express schemas and payloads as tables rather than as dumps —
+   a design is read by product members as well as engineers. Do **not** invent
+   architecture the code doesn't support; where the code is silent on something
+   an AC needs, note the gap rather than fabricating a mechanism.
+   `linkEntityRepository` each design to the repository (or repositories) its
+   seam lives in.
 3. **Link designs to the ACs they fulfil**, so each requirement's acceptance
    criteria are covered by at least one design. The cheapest route is
    `createDesign`'s `acceptanceCriteriaRefs`, which records coverage as the
@@ -237,6 +248,9 @@ consistent.
   repositories connected to the org, and `linkEntityRepository` attaches one to
   a feature (or any entity) by its `github_repo_id` — so a reviewer of the
   import can see which codebase each feature was reverse-engineered from.
+  Designs get this too, and it is not optional there: link every repository a
+  design's seam spans. Entities above a task accumulate repositories; a task
+  carries exactly one (and imports create no tasks).
 
 ## Process checklist
 
