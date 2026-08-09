@@ -67,10 +67,18 @@ question, and the answers get more concrete as you go down:
 | **Design** | *How do we build it so those conditions hold?* | Architecture & mechanism |
 | **Task** | *What work ships a slice of that design?* | Unit of work |
 
-Implementation detail — vendors, libraries, schemas, algorithms, code — is
+Feature and Requirement are the *what* and the *why*; Design and Task are the
+*how*. Implementation detail — vendors, libraries, data models, algorithms — is
 introduced at the **Design** level and nowhere above it. These skills encode
 that classification lens so entities land where they belong and stay
 traceable from product intent all the way down to shipped code.
+
+The implementation itself is the exception that stops at the bottom: **no
+entity contains the code**, not even a design or a task. Designs express data
+models and contracts as human-readable tables — they are read by product and
+engineering alike — and both designs and tasks are grounded in analysis of the
+codebase they will change, quoting the code that already exists rather than
+writing the code that doesn't yet.
 
 ## Contributing
 

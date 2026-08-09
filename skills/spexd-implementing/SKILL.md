@@ -124,7 +124,8 @@ A task on its own is only a definition-of-done. Its *meaning* lives above it.
 Before writing code, read the whole ancestor chain so you build the right thing:
 
 - **Design** (`readDocument`) — the parent. This is where the architecture,
-  data model, contracts, algorithms and trade-offs are. **This is your primary
+  boundaries, data model, contracts, security, configuration, deployment,
+  failure modes, testing areas and trade-offs are. **This is your primary
   spec.** `getDesignCoverage` then tells you exactly which acceptance criteria
   it fulfils — that set, not the requirement's whole list, is what this design
   is answerable for.
@@ -160,9 +161,23 @@ it's meant to work before touching code.
 
 ### 4. Build
 
-- Implement to the **design's** mechanism and the **task's** definition-of-done
-  checklist. Satisfy **every** acceptance criterion in the design's AC set, golden
-  path and edge cases alike.
+- Implement to the **design's** mechanism and the **task's** definition of done.
+  Satisfy **every** acceptance criterion in the design's AC set, golden path and
+  edge cases alike.
+- **The task tells you what to write; it never contains it.** A task states what
+  changes, what good looks like, what tests should exist, what regressions to
+  cover and what finished looks like — plus any `**Depends on:**` line naming
+  tasks that must land first. Code in the entities is quoted evidence of what
+  already exists, not a draft to paste. Writing the implementation is your job,
+  in the repository's own idiom and along the grain the design describes.
+- **Write the tests the task names**, including the regression cases it calls
+  out. The design says which areas of testing prove its acceptance criteria; the
+  task says which tests to add. A criterion with no assertion that fails when it
+  stops holding is not implemented, however green the suite is.
+- **Land it whole.** A task is scoped to merge to `main` on its own without
+  leaving dead paths — no half-wired screen or unreachable route. If you find
+  you can't finish the slice that way, say so rather than merging the stranded
+  half; the task boundary is wrong and belongs back with authoring.
 - Follow the repository's own conventions and its `CLAUDE.md` / contributor rules
   — this skill governs *how to use Spexd for context*, not how to write code in a
   given codebase.
@@ -293,15 +308,17 @@ server-side; don't try to route around it).
 1. Resolve the task (by reference, or by finding outstanding work).
 2. Report it back first: **link (`viewUrl`) + title + concise summary**, before
    any plan or code.
-3. Confirm it's ready to build (`APPROVED`); if not, surface the gap rather than
-   forcing a transition.
+3. Confirm it's ready to build (`APPROVED`), and that nothing on its
+   `**Depends on:**` line is still outstanding; if either is unmet, surface the
+   gap rather than forcing a transition or building out of order.
 4. Read the full ancestor chain (design → ACs → requirement → feature) before
    coding — one batched `readDocument` for the bodies, `getDesignCoverage` for
    the exact AC set you owe.
 5. Branch with the reference in its name; confirm the task reached
    `IMPLEMENTATION_STARTED`, and `transitionEntityStatuses` it there yourself
    if the GitHub automation didn't.
-6. Implement to the design and the task's definition-of-done; satisfy every AC.
+6. Implement to the design and the task's definition of done; write the tests it
+   names and cover the regressions it calls out; satisfy every AC.
 7. Raise the PR, titled `{reference}: {title}` (e.g. `TASK-12: Implement POST
    /api/rides`); confirm the task reached `PR_RAISED` (or transition it); link
    the task and any entity you cite from the PR description.
