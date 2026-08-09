@@ -239,9 +239,12 @@ consistent.
   content-free — metadata, `viewUrl` and the ancestor chain only. When you need
   to read back what an entity actually says (checking a sub-agent's work, say),
   that is `readDocument`, which takes up to 10 references at once.
-- **A diagram beats a paragraph for an architectural seam.** Upload it with
-  `createAttachmentUpload` — a two-step protocol that does *not* transfer the
-  file: mint a ticket with the file's size and SHA-256, POST the bytes with the
+- **A diagram beats a paragraph for an architectural seam**, and a fenced
+  `mermaid` block in the design's body is the cheapest way to draw one — it
+  renders in the document and stays editable as the import is reviewed. Only
+  where mermaid can't draw the picture do you need an upload:
+  `createAttachmentUpload` is a two-step protocol that does *not* transfer the
+  file — mint a ticket with the file's size and SHA-256, POST the bytes with the
   `curl` command it returns, then embed the resulting URL in the design's
   markdown. Never inline the bytes or read the file into context.
 - **Link the repository you imported from.** `listGitHubConnections` lists the

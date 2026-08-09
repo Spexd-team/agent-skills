@@ -306,10 +306,13 @@ absent because it doesn't apply, not because nobody thought about it.
   criterion stopped holding.
 - **Trade-offs and alternatives considered**, and the ADRs and tickets behind
   them.
-- **A diagram**, where the architecture is easier seen than read. A diagram is
-  an image in the body — upload it with `createAttachmentUpload` (see
-  *Operational notes*) and embed the returned URL, rather than settling for
-  ASCII art.
+- **A diagram**, where the architecture is easier seen than read. A fenced
+  `mermaid` block in the body is the cheapest route and usually the right one:
+  it renders in the document, and it stays editable and diffable as the design
+  changes, so a later edit is a text change rather than a re-upload. Where the
+  picture doesn't fit what mermaid draws, upload an image with
+  `createAttachmentUpload` (see *Operational notes*) and embed the returned
+  URL. Either beats ASCII art.
 
 **Keep out — four things that creep into designs and don't belong.**
 
@@ -637,6 +640,10 @@ the task exists to commission is not.
   just the propose — makes those edits permanently impossible.
 - References are server-generated; never invent or assume the next number —
   read it from the create response.
+- **Diagrams render from a fenced `mermaid` block**, so a diagram usually needs
+  no upload at all — write it inline and it renders in the document, where it
+  stays editable by a later `editDocument` op instead of needing a fresh image.
+  Reach for an attachment only for a picture mermaid can't draw.
 - **Images and attachments are a two-step upload.** `createAttachmentUpload`
   does **not** transfer the file: compute the size and SHA-256 locally, call it
   to mint a one-shot ticket, then POST the bytes yourself with the `curl`
