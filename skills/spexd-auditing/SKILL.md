@@ -122,7 +122,7 @@ If the audit runs to more than a couple of requirements, publish it as an Artifa
 
 ## The verdict file
 
-The report is what a person reads. Emit a **verdict file** alongside it — the same audit in the form `pnpm review:import` loads into Spexd, so each finding reaches the subject's own page and the measures that count it. It lives under `reviews/` in the repository you audited.
+The report is what a person reads. Emit a **verdict file** alongside it — the same audit in machine-readable form, so each finding can reach the subject's own page in Spexd and the measures that count it. It lives under `reviews/` in the repository you audited.
 
 ### Where it goes
 
@@ -171,19 +171,12 @@ A file is a flat set of verdicts at one revision. Nothing groups them: a verdict
 }
 ```
 
-Import it against the organization holding the specification:
-
-```bash
-pnpm review:import -- --org org_123 --dry-run reviews/<hash>   # parse and report, writes nothing
-pnpm review:import -- --org org_123 reviews/<hash>
-```
-
 Two addressing rules, both of which a file can violate silently:
 
 - **A criterion is addressed by the (requirement, criterion) pair**, never by a bare `AC-n`. `AC-1` restarts under every requirement, so a bare reference names a criterion under every requirement in the subtree — the verdict still lands, it is just somebody else's.
-- **A file carries no organization id.** A verdict set is a statement about a revision of the software rather than about a tenant, and the same file is legitimately importable into a second organization holding the same specification. `--org` at import is the only thing that decides where the rows land.
+- **A file carries no organization id.** A verdict set is a statement about a revision of the software rather than about a tenant, so the same file is legitimately loadable into any organization holding the same specification. Which one it lands in is decided when it is loaded, never by the file.
 
-A verdict carries no document version, and cannot: the importer records the version each subject stands at when the import runs, since that is the document the review read. So import a sweep promptly, against the specification it judged — a design published between the audit and the import records its verdict against the *new* version, which is the one claim the file cannot make true.
+A verdict also names no document version, and cannot: each subject's version is resolved at the moment the file is loaded, since a review judges whatever the document said when it ran. So a sweep left sitting while the specification moves on attaches its verdicts to documents it never read — emit the file against the revision it judged, and get it loaded while that is still true.
 
 ### Mapping your verdicts to the file's
 
@@ -201,7 +194,7 @@ The criteria do not. You reach five verdicts; the file has four, and the two wit
 
 Do not collapse or re-map these. Three of the four criterion verdicts count against proven identically, which makes merging them look free — but the summary buckets them apart, and that is what makes an unbuilt criterion read as backlog rather than as a specification that is wrong. Re-mapping one moves a measure in the product with nothing failing to say so.
 
-`evidence` is what makes the file worth importing: it is the part a reader acts on. Carry over the citation you put in the report — the test's own name, the predicate, the line — not a restatement of the verdict.
+`evidence` is what makes the file worth keeping: it is the part a reader acts on. Carry over the citation you put in the report — the test's own name, the predicate, the line — not a restatement of the verdict.
 
 ### An audit that stops partway
 
