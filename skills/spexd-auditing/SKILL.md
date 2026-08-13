@@ -120,6 +120,95 @@ Two things to hold to throughout. **Quote the code and the tests** — a line re
 
 If the audit runs to more than a couple of requirements, publish it as an Artifact — the tables are the point, and they need room. Load `artifact-design` first.
 
+## The verdict file
+
+The report is what a person reads. Emit a **verdict file** alongside it — the same audit in the form `pnpm review:import` loads into Spexd, so each finding reaches the subject's own page and the measures that count it. It lives under `reviews/` in the repository you audited.
+
+### Where it goes
+
+One directory per revision, named by the **full** commit hash you audited against, holding one file per scope you audited:
+
+```
+reviews/
+  7b9279d346838b24dbeb2fecf89d021e9199983a/
+    FEAT-32.json
+    DES-227.json
+```
+
+Name each file after the scope you set out to audit — `FEAT-n.json` for a feature, `REQ-n.json` for one requirement's criteria, `DES-n.json` for a single design. That name is for whoever reads the directory; nothing in the store records a scope, so the file is judged only by the verdicts in it. A feature is still the natural unit for a *person* to audit. It is just no longer a unit the store knows about, which is why auditing a single design now produces a valid file.
+
+A later sweep is a **new directory**, never an edit of an old one. A verdict travels with the revision it was formed at, so re-auditing at a later revision is a second finding rather than a correction — `accurate` at one revision and `stale` at the next *is* the drift signal, and editing the old file in place destroys the most useful thing a repeated audit has to say.
+
+### The shape
+
+A file is a flat set of verdicts at one revision. Nothing groups them: a verdict is keyed by the subject it judges, so there is no feature to name and no run to open or close.
+
+| Field | Purpose |
+|---|---|
+| `revision` | The full commit hash judged. Applies to every verdict in the file, and travels with every measure derived from them |
+| `entityVerdicts[]` | One per design you sorted: its reference, its verdict, and the evidence for it |
+| `criterionVerdicts[]` | One per criterion you verdicted: the owning requirement, the criterion reference, its verdict, and the evidence for it |
+
+```jsonc
+{
+  "revision": "7b9279d346838b24dbeb2fecf89d021e9199983a",
+  "note": "spexd-auditing sweep over FEAT-32 at 7b9279d. Free-form provenance for a human reading the file; not stored.",
+  "entityVerdicts": [
+    {
+      "entityReference": "DES-209",
+      "verdict": "stale",
+      "evidence": "The argument holds and the date guarantee it describes now has a real check behind it (tests/unit/terms-page.test.ts \"asserts the effective date\"), but it still names the column `metadata.status`, which moved to `entity.status`."
+    }
+  ],
+  "criterionVerdicts": [
+    {
+      "requirement": "REQ-180",
+      "criterionReference": "AC-1",
+      "verdict": "proven",
+      "evidence": "tests/unit/auth-guard.test.ts \"/terms — signed out — is not redirected\" drives the real middleware rather than a copy of its logic, and fails if the allowlist entry at app/middleware/auth.global.ts:11 is removed."
+    }
+  ]
+}
+```
+
+Import it against the organization holding the specification:
+
+```bash
+pnpm review:import -- --org org_123 --dry-run reviews/<hash>   # parse and report, writes nothing
+pnpm review:import -- --org org_123 reviews/<hash>
+```
+
+Two addressing rules, both of which a file can violate silently:
+
+- **A criterion is addressed by the (requirement, criterion) pair**, never by a bare `AC-n`. `AC-1` restarts under every requirement, so a bare reference names a criterion under every requirement in the subtree — the verdict still lands, it is just somebody else's.
+- **A file carries no organization id.** A verdict set is a statement about a revision of the software rather than about a tenant, and the same file is legitimately importable into a second organization holding the same specification. `--org` at import is the only thing that decides where the rows land.
+
+A verdict carries no document version, and cannot: the importer records the version each subject stands at when the import runs, since that is the document the review read. So import a sweep promptly, against the specification it judged — a design published between the audit and the import records its verdict against the *new* version, which is the one claim the file cannot make true.
+
+### Mapping your verdicts to the file's
+
+Designs map straight across: **accurate** → `accurate`, **stale in detail** → `stale`, **contradicts** → `contradicts`.
+
+The criteria do not. You reach five verdicts; the file has four, and the two with no value of their own are recorded by what they mean for the measure, with the distinction carried in `evidence`:
+
+| Your verdict | In the file | Why |
+|---|---|---|
+| Proven | `proven` | — |
+| Proof gap | `unproven` | Implemented, nothing asserts it |
+| **Latent** | `unproven` | Built and tested but gated off in every environment, so no running system demonstrates it. Not `not_implemented` — the code exists and the open question is rollout |
+| **Obsolete** | `contradicted` | The behaviour it describes was deliberately retired, so the software contradicts it as written |
+| Not met | `not_implemented` | — |
+
+Do not collapse or re-map these. Three of the four criterion verdicts count against proven identically, which makes merging them look free — but the summary buckets them apart, and that is what makes an unbuilt criterion read as backlog rather than as a specification that is wrong. Re-mapping one moves a measure in the product with nothing failing to say so.
+
+`evidence` is what makes the file worth importing: it is the part a reader acts on. Carry over the citation you put in the report — the test's own name, the predicate, the line — not a restatement of the verdict.
+
+### An audit that stops partway
+
+There is no run to open, so there is none to mark failed, and nothing to abandon. Emit the verdicts you reached. Every subject you did not reach simply has no row and reads `unverified` in Spexd, which is a state of its own rather than a gap — so a half-finished sweep is a valid file, and every verdict in it is true of what it judged.
+
+Say in the report which subjects you did not reach, and why. That is the one thing the file cannot carry: to the store, a subject you ran out of time for and one nobody ever intended to judge are the same absence.
+
 ## Scope
 
 Audit the whole live feature unless the user names a narrower scope — cancelled entities are outside every scope, including one the user names explicitly, because the entity they pointed at may have been retired since they last looked. Say so and stop rather than auditing it.
