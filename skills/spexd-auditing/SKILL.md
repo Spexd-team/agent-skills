@@ -146,8 +146,8 @@ A file is a flat set of verdicts at one revision. Nothing groups them: a verdict
 | Field | Purpose |
 |---|---|
 | `revision` | The full commit hash judged. Applies to every verdict in the file, and travels with every measure derived from them |
-| `entityVerdicts[]` | One per design you sorted: its reference, its verdict, and the evidence for it |
-| `criterionVerdicts[]` | One per criterion you verdicted: the owning requirement, the criterion reference, its verdict, and the evidence for it |
+| `entityVerdicts[]` | One per design you sorted: its reference, its verdict, and the finding behind it |
+| `criterionVerdicts[]` | One per criterion you verdicted: the owning requirement, the criterion reference, its verdict, and the finding behind it |
 
 ```jsonc
 {
@@ -157,7 +157,14 @@ A file is a flat set of verdicts at one revision. Nothing groups them: a verdict
     {
       "entityReference": "DES-209",
       "verdict": "stale",
-      "evidence": "The argument holds and the date guarantee it describes now has a real check behind it (tests/unit/terms-page.test.ts \"asserts the effective date\"), but it still names the column `metadata.status`, which moved to `entity.status`."
+      "finding": {
+        "summary": "The argument holds, but one name in it has moved:",
+        "points": [
+          { "label": "accurate", "text": "The date guarantee it describes has a real check behind it (`tests/unit/terms-page.test.ts`)." },
+          { "label": "stale", "text": "It names the column `metadata.status`, which moved to `entity.status` (`server/db/postgres/schema.ts`)." }
+        ],
+        "closing": "Nothing else in the document names a table or column that has since moved."
+      }
     }
   ],
   "criterionVerdicts": [
@@ -165,7 +172,14 @@ A file is a flat set of verdicts at one revision. Nothing groups them: a verdict
       "requirement": "REQ-180",
       "criterionReference": "AC-1",
       "verdict": "proven",
-      "evidence": "tests/unit/auth-guard.test.ts \"/terms — signed out — is not redirected\" drives the real middleware rather than a copy of its logic, and fails if the allowlist entry at app/middleware/auth.global.ts:11 is removed."
+      "finding": {
+        "summary": "The middleware allows the route through, and a test asserts it:",
+        "points": [
+          { "text": "`tests/unit/auth-guard.test.ts` \"/terms — signed out — is not redirected\" drives the real middleware rather than a copy of its logic." },
+          { "text": "It fails if the allowlist entry at `app/middleware/auth.global.ts:11` is removed." }
+        ],
+        "closing": null
+      }
     }
   ]
 }
@@ -182,7 +196,7 @@ A verdict also names no document version, and cannot: each subject's version is 
 
 Designs map straight across: **accurate** → `accurate`, **stale in detail** → `stale`, **contradicts** → `contradicts`.
 
-The criteria do not. You reach five verdicts; the file has four, and the two with no value of their own are recorded by what they mean for the measure, with the distinction carried in `evidence`:
+The criteria do not. You reach five verdicts; the file has four, and the two with no value of their own are recorded by what they mean for the measure, with the distinction carried in the `finding`:
 
 | Your verdict | In the file | Why |
 |---|---|---|
@@ -194,7 +208,25 @@ The criteria do not. You reach five verdicts; the file has four, and the two wit
 
 Do not collapse or re-map these. Three of the four criterion verdicts count against proven identically, which makes merging them look free — but the summary buckets them apart, and that is what makes an unbuilt criterion read as backlog rather than as a specification that is wrong. Re-mapping one moves a measure in the product with nothing failing to say so.
 
-`evidence` is what makes the file worth keeping: it is the part a reader acts on. Carry over the citation you put in the report — the test's own name, the predicate, the line — not a restatement of the verdict.
+### Writing the finding
+
+`finding` is what makes the file worth keeping: it is the part a reader acts on, and it is drawn on the document itself. Carry over the citation you put in the report — the test's own name, the predicate, the line — not a restatement of the verdict.
+
+It is three fields, stored and drawn apart, so do not repeat one in another:
+
+| Field | What goes in it |
+|---|---|
+| `summary` | One line on what the software does about the subject as a whole. Where you have several things to say, this is the line that introduces them; where you have one, it is the whole finding and `points` is empty |
+| `points[]` | One entry per further thing you found, five at most, in the order the document reads. Each is one sentence naming in backticks the file it rests on |
+| `closing` | What qualifies the verdict — coverage you did or did not find, a gap you judged not to be a contradiction. One or two sentences, or `null`. Never the points again in prose |
+
+Every field is markdown. Write no bullet markers of your own: a point is one entry in a list, and the marker is added when it is drawn.
+
+**A design's points each carry their own `label`** — `accurate`, `stale` or `contradicts` — and it decides what a reader sees. The points needing action are shown first and the matching ones are folded away behind a control, so a point labelled `accurate` that actually contradicts the software is a point the reader may never open. Label each on its own merits: the verdict is about the document as a whole and routinely differs from an individual point, which is the whole reason the labels exist. A design that contradicts in one place usually matches in three others.
+
+**A criterion's points carry no label.** A criterion is one question about one criterion, so there is no per-point vocabulary to draw from — borrowing the design words there would name a verdict the criterion cannot give. Omit the field; every point is shown.
+
+A file may still carry a plain `"evidence": "…"` string instead of a `finding`, and older sweeps do. It loads, as a summary line with no points — so nothing is lost, but nothing is grouped either, and the reader gets the wall of text the three fields exist to break up. Write `finding` on anything new.
 
 ### An audit that stops partway
 
