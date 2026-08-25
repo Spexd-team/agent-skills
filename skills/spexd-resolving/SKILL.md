@@ -60,9 +60,12 @@ optimised; one that is just a list gets shortened by the first model in a hurry.
    approved descendant. Four findings settled separately are four cascades and
    four chances to invalidate an approval that a single version would have
    spared.
-3. **Repeat the plan back, with a count per disposition, and wait.** *Because it
-   is the last free moment.* Everything before it is undone by the reader
-   closing the panel; everything after it writes.
+3. **State the plan, with a count per disposition, and carry straight on.**
+   *Because the arithmetic is the one thing the reader cannot check by eye.*
+   They have just decided each finding one at a time; the total is the part
+   they have not seen. Don't stop for a go-ahead: the last moment at which
+   nothing is irreversible is the publish, not the plan, because everything
+   before it lands in the live draft and a draft is not a version.
 4. **Apply every correction to the live draft.** All of them. No publish yet.
 5. **Raise each task.**
 6. **Anchor each task's comment.** *Corrections before tasks, tasks before
@@ -147,8 +150,8 @@ precisely as they were before the run started.
 
 ## The plan
 
-Once every finding is decided, and before the first write, state the plan and
-wait for the reader to say go.
+Once every finding is decided, and before the first write, state the plan — and
+then carry straight on from it into the corrections.
 
 State **a count per disposition**, not a re-listing of the findings:
 
@@ -160,7 +163,10 @@ The reader has just decided each finding one at a time; what they cannot check
 by eye is the arithmetic. The counts must add up to the number of findings you
 read, and a disposition nobody chose is reported as none rather than omitted.
 
-Then wait. This is the last point at which nothing has been written.
+**It is a statement, not a gate.** Never ask the reader to confirm the plan, in
+either mode. It restates decisions they have just made one by one, and whether a
+*write* needs their permission is the write gate's question rather than yours —
+the plan is not a write, so there is nothing for a gate to hold.
 
 ## Correcting a passage
 
@@ -286,6 +292,9 @@ shows it.
 The run has no mode of its own; it inherits the reader's. **Only *when* they
 meet the consequence changes.**
 
+The plan is stated in both modes and gates neither, so it is not a row in this
+table — it is not a write, and writes are all the mode governs.
+
 | Step | Approval mode | Auto mode |
 |---|---|---|
 | Every per-finding question | asked one at a time, answered by choosing | **identical** |
@@ -298,7 +307,7 @@ You do not implement that table; the write gate does. What you must not do is
 change **your own** behaviour because of the mode — same questions, same order,
 same single publish, and the cascade reported either way.
 
-## Three things never to do
+## Four things never to do
 
 **Never settle one finding and then ask the next.** Four findings settled in
 turn are four publishes and four cascades, each with its own chance to
@@ -315,6 +324,13 @@ reader's own mode. A choice is a decision the reader owns — *which of these tw
 is wrong* — and using one to ask *may I write this* would gate a write in auto
 mode, which is the one thing auto mode says it will not do.
 
+**Never ask the reader to confirm the plan.** It is a statement of what they
+have already decided, one finding at a time, and pausing on it gates the whole
+set in a mode that says it will not gate writes — the same reasoning as the
+prohibition above. Approval mode puts each correction, task and comment to them
+on its own card moments later, against the actual prose; auto mode is them
+saying they do not want those cards.
+
 ## Process checklist
 
 1. `getEntity` and `readDocument` on the design; take the finding from the
@@ -323,7 +339,7 @@ mode, which is the one thing auto mode says it will not do.
 2. Report what you read, including a difference from the count in the ask.
 3. One `askChoice` per finding, three options, one at a time, all of them.
 4. Write nothing until the last one is decided.
-5. State the plan as a count per disposition, and wait.
+5. State the plan as a count per disposition, then carry on to the corrections.
 6. Read the cited code, `searchDocument`, then `editDocument` — every correction
    into the draft, no publish.
 7. `createTask` per finding the reader raised work on, then
