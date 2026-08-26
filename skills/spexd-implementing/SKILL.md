@@ -68,8 +68,10 @@ context → build → reflect status.** Never skip straight from "find" to
 - **Given a feature/requirement/design**, whether the ask is "what's next" or
   "implement all of it", the unit of work is still the task. Use
   `getOutstandingWorkForEntity` — the bare reference, whichever of the three it
-  is — to list the descendants whose status needs action, then `listChildren`
-  on the design's reference to enumerate its tasks. Pick a task that is ready
+  is — to list the descendants whose status needs action, then
+  `listDescendants` on the design's reference to enumerate its tasks (its
+  default depth is that one level; from a feature or requirement, pass
+  `maxDepth: -1` and `types: ["TASK"]` to reach the tasks instead). Pick a task that is ready
   to build (see status rules below); if you're building the whole parent, work
   through its tasks one at a time as [Given a parent entity](#given-a-parent-entity-work-it-task-by-task)
   describes.
@@ -111,7 +113,7 @@ itself. The older positional form (`/feature/FEAT-3/REQ-7/DES-9/TASK-12`) still
 redirects, but don't write new links in it.
 
 `viewUrl` comes back from `getEntity` / `getEntities`, `listFeatures`,
-`listChildren`, `searchEntities`, `listInbox`, `resolveEntityReferences` and
+`listDescendants`, `searchEntities`, `listInbox`, `resolveEntityReferences` and
 `resolveGitHubBranch` — take it from the response rather than composing a URL
 yourself. Two tools don't return one: `readDocument` (so keep the link from
 whichever tool surfaced the entity), and `getOutstandingWorkForEntity`, whose
@@ -313,10 +315,13 @@ repository, and the lifecycle GitHub drives. So when you're pointed at a parent
 ("implement DES-320"), don't open one branch for the parent and land the whole
 thing in a single PR. Expand it into its tasks and ship them one at a time.
 
-**1. Enumerate the tasks.** `listChildren` on a design gives its tasks;
-`getOutstandingWorkForEntity` on a requirement or feature gives the descendants
-still needing action, from which you take the tasks — and the designs to expand
-in turn. Report the set back the way step 2 asks: link, title and a one-line
+**1. Enumerate the tasks.** `listDescendants` on a design gives its tasks (one
+level down is its default); on a requirement or feature,
+`listDescendants(ref, { types: ["TASK"], maxDepth: -1 })` gives every task
+beneath it in one call, each carrying the design it belongs to as `parent`.
+`getOutstandingWorkForEntity` answers a different question — the descendants
+still needing action — and is what you want when the ask is "what's next"
+rather than "all of it". Report the set back the way step 2 asks: link, title and a one-line
 summary for each.
 
 **2. Decide the order, and say it before you start.** Each task's
@@ -408,7 +413,7 @@ raise the design problem the way step 4 of the loop describes.
   `TASK-991` pasted from a branch name or a PR title resolves on its own through
   `getEntity` (or, from the raw branch/PR text, `resolveGitHubBranch`). The
   *document* tools (`readDocument`, `searchDocument`, `editDocument`,
-  `publishDocument`), `listChildren`, `transitionEntityStatuses`, `moveEntity`,
+  `publishDocument`), `listDescendants`, `transitionEntityStatuses`, `moveEntity`,
   `listVersions` and `getOutstandingWorkForEntity` address the same way — the
   bare reference, no kind and no owning feature. Only a parent is ever named:
   `createRequirement` takes a `featureRef`, `createDesign` a `requirementRef`,

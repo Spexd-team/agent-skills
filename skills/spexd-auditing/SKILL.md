@@ -21,7 +21,7 @@ There is exactly one status that decides something, and it decides scope rather 
 
 ## `CANCELLED` entities are not in the audit at all
 
-Cancelling is Spexd's soft delete: the entity is hidden from the app UI, but API and MCP reads still return it, so it will arrive in your `listChildren` and `readDocument` results looking like any other requirement or design. It is retired work. Someone decided it does not belong to the feature any more, and auditing it produces findings about spec nobody intends to honour.
+Cancelling is Spexd's soft delete: the entity is hidden from the app UI, but API and MCP reads still return it, so it will arrive in your `listDescendants` and `readDocument` results looking like any other requirement or design. It is retired work. Someone decided it does not belong to the feature any more, and auditing it produces findings about spec nobody intends to honour.
 
 So drop it, and drop everything under it — cancelling carries its descendants down with it, so a cancelled requirement takes its criteria and designs with it whether or not their own status says so. Filter on the status field as you walk the tree, before you read a single body: never verdict a criterion beneath a cancelled parent, never sort a cancelled design for accuracy, and never let either reach the report — not in a section, not in a table row, and above all not in the verdict counts. A count inflated by retired criteria misstates the health of the feature, which is the one number the reader most trusts.
 
@@ -34,10 +34,11 @@ Pull the whole tree before auditing anything. Judging one requirement in isolati
 Use the Spexd MCP tools:
 
 - `getEntity(FEAT-n)` and `readDocument([FEAT-n])` — the feature's own body drifts too, and it is the last thing anyone rereads.
-- `listChildren(FEAT-n, pageSize: 100)` — the requirements. Discard the `CANCELLED` ones here, and don't descend into them.
+- `listDescendants(FEAT-n, { types: ["REQ", "DES"], maxDepth: -1, pageSize: 100 })` — every requirement and design beneath the feature, at every depth, in **one** call. `maxDepth` defaults to 1, so pass `-1` or you get the requirements alone. Each row carries its immediate `parent`, which is how you group the designs under their requirements.
+
+  Then prune the retired work, in this order: discard the `CANCELLED` rows, then discard anything whose `parent` you just discarded. A subtree read does not stop at a cancelled node the way descending requirement by requirement did, so a retired requirement's designs arrive looking perfectly live.
 - `readDocument([...])` for the requirement bodies. **Batch 5–6 at a time**; larger batches overflow and get spilled to a file you then have to re-read.
 - `listAcceptanceCriteria(requirementRef, pageSize: 100)` for each surviving requirement — one call each, they parallelise well. Note each criterion's `fulfilledBy`.
-- `listChildren(requirementRef, pageSize: 100)` for each surviving requirement — the designs. Discard the cancelled ones again; a live requirement can have cancelled designs beneath it.
 - `readDocument([...])` for every remaining design, again in small batches.
 
 If a `readDocument` result is spilled to a file, split it into per-reference files with a short Python one-liner rather than reading the whole blob back — you will want to grep individual designs later anyway.

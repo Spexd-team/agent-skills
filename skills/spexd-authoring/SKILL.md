@@ -454,7 +454,7 @@ the task exists to commission is not.
   (`/feature/FEAT-3/REQ-7/DES-9`) still redirects, but don't write new links in
   it.
 
-  `getEntity` / `getEntities`, `listFeatures`, `listChildren`,
+  `getEntity` / `getEntities`, `listFeatures`, `listDescendants`,
   `searchEntities`, `listInbox`, `resolveEntityReferences` and
   `resolveGitHubBranch` all return `viewUrl` alongside the reference — take the
   URL from the response rather than composing one yourself, and if you don't
@@ -489,7 +489,7 @@ the task exists to commission is not.
 ## Operational notes (MCP surface)
 
 - **`readDocument` is the only way to get a body at all.** Every other tool —
-  `getEntity`, `getEntities`, `listChildren`, the `create*` tools, the publish
+  `getEntity`, `getEntities`, `listDescendants`, the `create*` tools, the publish
   and transition responses — is **content-free**: it carries the entity's
   metadata (type, status, owning feature, `viewUrl`, ancestors) and never its
   document. So don't reach for `getEntity` to "read" an entity; it tells you
@@ -691,9 +691,11 @@ the task exists to commission is not.
    `searchEntities` is the fastest first look — typo-tolerant full text across
    every entity, filterable by `types`, `statuses` and `feature`. Then walk
    structurally: `listFeatures` (optionally filtered to a project, or `"none"`
-   for the unassigned), then `listChildren`, which lists any entity's direct
-   children by `reference` alone — a feature's requirements, a requirement's
-   designs, a design's tasks. Acceptance criteria are not a chain level, so
+   for the unassigned), then `listDescendants`, which lists what is below any
+   entity by `reference` alone — its direct children by default (a feature's
+   requirements, a requirement's designs, a design's tasks), or the whole
+   subtree at every depth with `maxDepth: -1`, which is how you take in an
+   existing feature in one call. Acceptance criteria are not a chain level, so
    list those with `listAcceptanceCriteria`; a project is not a chain parent,
    so list its features with `listProjectFeatures`.
 3. **Create top-down.** Feature first (`createFeature`, optionally with
@@ -716,8 +718,9 @@ the task exists to commission is not.
    (propose, review the cascade, confirm). Spexd links the child to its
    parent automatically, so there's no need to list or point to it from the
    parent body.
-5. **Verify at the end.** Walk the chain (`listFeatures` → `listChildren` at
-   each level down, plus `listAcceptanceCriteria` on each requirement) and
+5. **Verify at the end.** Walk the chain (`listFeatures`, then one
+   `listDescendants(FEAT-n, { maxDepth: -1 })` for everything beneath it, plus
+   `listAcceptanceCriteria` on each requirement) and
    confirm the created set matches the plan, that every AC has a design against
    it (`fulfilledBy`), and that no implementation detail leaked above Design.
    Check the two things that are easy to leave half-done: **every design and
