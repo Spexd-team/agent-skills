@@ -125,7 +125,7 @@ for altitude; and the two rules above. A prompt template:
 > each one in what you observe; don't invent capabilities the code doesn't
 > show. For each, `createRequirement` under `<featureRef>` with a product-level
 > body and a `**Sources:**` line. Keep mechanism out (no vendors, tables,
-> algorithms, or code — those wait for Design). Check `listChildren` on
+> algorithms, or code — those wait for Design). Check `listDescendants` on
 > `<featureRef>` first to avoid duplicates.
 >
 > **Step B — Acceptance criteria.** For each requirement you created, write the
@@ -232,7 +232,7 @@ consistent.
   server-generated and **unique across the org** — read them from the create
   response and never invent them. A bare reference resolves on its own, so
   reading one back needs nothing else — `getEntity` (or `getEntities` for a
-  batch), and the document tools and `listChildren` alike. Only writes name a
+  batch), and the document tools and `listDescendants` alike. Only writes name a
   parent: `createRequirement` takes a `featureRef`, `createDesign` a
   `requirementRef`, `createTask` a `designRef`.
 - **`getEntity` never returns a body.** It and every other entity response are
@@ -269,9 +269,10 @@ consistent.
 5. **Design** across the requirements along architectural seams, grounded in the
    real codebase; link each design to the ACs it fulfils; confirm every AC is
    covered.
-6. **Verify** the chain: `listProjectFeatures`, then `listChildren` at each
-   level down — feature → requirement → design (acceptance criteria are not a
-   chain level, so list them per requirement with `listAcceptanceCriteria`,
+6. **Verify** the chain: `listProjectFeatures`, then one
+   `listDescendants(FEAT-n, { maxDepth: -1 })` per feature — every requirement
+   and design beneath it, each carrying its `parent` (acceptance criteria are
+   not a chain level, so list them per requirement with `listAcceptanceCriteria`,
    which also shows each criterion's `fulfilledBy` coverage). Confirm every
    entity is `DRAFT`, nothing was transitioned, no implementation detail leaked
    above Design, and nothing was invented beyond the AC exception. `listInbox`
