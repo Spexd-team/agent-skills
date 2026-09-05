@@ -485,6 +485,39 @@ the task exists to commission is not.
   wider audience — as a table with a row per field and a plain-language
   description than as a schema, type or payload. See *The one thing that
   belongs at no level*.
+- **Short, direct sentences, one point each.** A sentence carrying clauses
+  inside clauses is split into the sentences it was hiding. What fails is a
+  point the reader has to dig out of a subordinate clause — not a sentence
+  over some word count. There is no threshold here, because prose chopped to
+  hit one is no easier to act on.
+- **Use the ordinary word wherever it says the same thing.** Jargon, an
+  acronym or an obscure phrase fails on that condition alone: a common word
+  carries the same meaning. "Every 5 seconds", not "at a 5s cadence"; "read",
+  not "consume".
+- **A technical term has to do work.** This is a bar, not a ban — a design
+  cannot be written without technical terms, and stripping one that no plain
+  word replaces is its own failure. A term earns its place where it says
+  something no plain word says. What fails is stacking: terms piled up for
+  effect, which reads as precision and carries less than the sentence it
+  replaced.
+- **Stop when your level's question is answered.** A body that has answered
+  its row of the altitude table is finished, and carrying on means reaching
+  for material the level below owns. This repeats *detail only descends* on
+  purpose, and the two fire at different moments: the placement rule decides
+  where a piece of content goes as you classify it, while this one is a length
+  check at the end of a draft, which is where over-writing actually happens.
+- **Cut padding, hedging and restatement before the entity is written.**
+  Padding is a sentence making no claim; hedging is a verb qualified until no
+  reader could act on it ("should generally be considered"); restatement is
+  the same point made again in different words. Restatement is the hardest of
+  the three to see in your own draft, which is why all three are named rather
+  than left to "be concise". This is a pass over each draft rather than a
+  quality a body either has or lacks — *Process* runs it.
+- **The two-audience test is the rule with teeth; the rest are calibrated
+  against it.** *Design → Who reads it* states it: a product reader can follow
+  what the system does and why, and an engineer can tell what has to change.
+  It is the one rule here a passage can be held against, so where a judgement
+  above is close, ask which way the passage moves those two readers.
 
 ## Operational notes (MCP surface)
 
@@ -698,7 +731,15 @@ the task exists to commission is not.
    existing feature in one call. Acceptance criteria are not a chain level, so
    list those with `listAcceptanceCriteria`; a project is not a chain parent,
    so list its features with `listProjectFeatures`.
-3. **Create top-down.** Feature first (`createFeature`, optionally with
+3. **Cut the draft before the call that writes it.** Every body gets one pass
+   for the three targets named in *Content conventions* — padding, hedging,
+   and the same idea restated — and it runs on each draft in turn, before the
+   `create*` or publish call, not on the chain afterwards. Making it a step is
+   what makes it happen: an agent asked to write plainly writes the way it
+   writes, while an agent asked to cut something finds something to cut. Read
+   the finished draft once more against its level's question, and stop the
+   body where that question is answered.
+4. **Create top-down.** Feature first (`createFeature`, optionally with
    `projectRefs`), then its requirements (`createRequirement` needs the
    `featureRef` from the create response), then acceptance criteria under each
    requirement — each a two-call step, `createAcceptanceCriterion` to propose
@@ -710,7 +751,7 @@ the task exists to commission is not.
    it touches) and every task (exactly one). Decompose a design into tasks along
    its repository and merge-safety boundaries, and give any task that can't
    start yet its `**Depends on:**` line.
-4. **Move wording, don't duplicate.** When extracting a lower-level entity
+5. **Move wording, don't duplicate.** When extracting a lower-level entity
    from a higher one (a requirement out of a feature, an AC out of a
    requirement), remove the moved text from the parent's draft — naturally a
    single `editDocument` call, whose `ops` delete the extracted passage and
@@ -718,7 +759,7 @@ the task exists to commission is not.
    (propose, review the cascade, confirm). Spexd links the child to its
    parent automatically, so there's no need to list or point to it from the
    parent body.
-5. **Verify at the end.** Walk the chain (`listFeatures`, then one
+6. **Verify at the end.** Walk the chain (`listFeatures`, then one
    `listDescendants(FEAT-n, { maxDepth: -1 })` for everything beneath it, plus
    `listAcceptanceCriteria` on each requirement) and
    confirm the created set matches the plan, that every AC has a design against
