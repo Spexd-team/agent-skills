@@ -487,37 +487,37 @@ the task exists to commission is not.
   belongs at no level*.
 - **Short, direct sentences, one point each.** A sentence carrying clauses
   inside clauses is split into the sentences it was hiding. What fails is a
-  point the reader has to dig out of a subordinate clause — not a sentence
-  over some word count. There is no threshold here, because prose chopped to
-  hit one is no easier to act on.
-- **Use the ordinary word wherever it says the same thing.** Jargon, an
-  acronym or an obscure phrase fails on that condition alone: a common word
-  carries the same meaning. "Every 5 seconds", not "at a 5s cadence"; "read",
-  not "consume".
-- **A technical term has to do work.** This is a bar, not a ban — a design
-  cannot be written without technical terms, and stripping one that no plain
-  word replaces is its own failure. A term earns its place where it says
-  something no plain word says. What fails is stacking: terms piled up for
-  effect, which reads as precision and carries less than the sentence it
-  replaced.
-- **Stop when your level's question is answered.** A body that has answered
-  its row of the altitude table is finished, and carrying on means reaching
-  for material the level below owns. This repeats *detail only descends* on
-  purpose, and the two fire at different moments: the placement rule decides
-  where a piece of content goes as you classify it, while this one is a length
-  check at the end of a draft, which is where over-writing actually happens.
+  point the reader has to dig out of a subordinate clause, not a sentence over
+  some word count — prose chopped to hit a number is no easier to act on.
+- **Reach for jargon, an acronym or an obscure phrase only where no common
+  word says the same thing.** Where one does, use it: "every 5 seconds", not
+  "at a 5s cadence"; "read", not "consume".
+- **A technical term has to do work.** It earns its place where it says
+  something no plain word says — a bar, not a ban, since a design cannot be
+  written without technical terms and stripping a needed one is its own
+  failure. What fails is stacking: terms piled up for effect, which reads as
+  precision and carries less than the sentence it replaced.
+- **Stop when your level's question is answered.** The table at the top of
+  this file gives each level its question. A body that has answered its own
+  has finished, and carrying on means reaching for material the level below
+  owns. This repeats *detail only descends* on purpose, because the two fire
+  at different moments: the placement rule decides where a piece of content
+  goes as you classify it, and this one is a length check at the end of a
+  draft, which is where over-writing happens.
 - **Cut padding, hedging and restatement before the entity is written.**
   Padding is a sentence making no claim; hedging is a verb qualified until no
   reader could act on it ("should generally be considered"); restatement is
-  the same point made again in different words. Restatement is the hardest of
-  the three to see in your own draft, which is why all three are named rather
-  than left to "be concise". This is a pass over each draft rather than a
-  quality a body either has or lacks — *Process* runs it.
-- **The two-audience test is the rule with teeth; the rest are calibrated
-  against it.** *Design → Who reads it* states it: a product reader can follow
-  what the system does and why, and an engineer can tell what has to change.
-  It is the one rule here a passage can be held against, so where a judgement
-  above is close, ask which way the passage moves those two readers.
+  the same point made again in different words. All three are named because
+  restatement in particular is near-invisible in your own draft. This is a
+  pass over each draft rather than a quality a body either has or lacks —
+  *Process* runs it.
+- **Where one of these is a close call, the two-audience test settles it.**
+  *Design → Who reads it* states it, and states it there because Design is the
+  level carrying both readers at once. It is the rule here that names its
+  readers rather than a property of the prose, which is what makes a close
+  call answerable: ask which reader the passage loses. Above Design only the
+  product reader applies — a feature written so an engineer can tell what to
+  change has broken *detail only descends*.
 
 ## Operational notes (MCP surface)
 
@@ -731,14 +731,12 @@ the task exists to commission is not.
    existing feature in one call. Acceptance criteria are not a chain level, so
    list those with `listAcceptanceCriteria`; a project is not a chain parent,
    so list its features with `listProjectFeatures`.
-3. **Cut the draft before the call that writes it.** Every body gets one pass
-   for the three targets named in *Content conventions* — padding, hedging,
-   and the same idea restated — and it runs on each draft in turn, before the
-   `create*` or publish call, not on the chain afterwards. Making it a step is
-   what makes it happen: an agent asked to write plainly writes the way it
-   writes, while an agent asked to cut something finds something to cut. Read
-   the finished draft once more against its level's question, and stop the
-   body where that question is answered.
+3. **Cut each draft before the call that writes it** — the `create*` in step
+   4, or the publish in step 5. One pass for the three targets in *Content
+   conventions*: padding, hedging, and the same idea restated. Making it a
+   step is what makes it happen: an agent asked to write plainly writes the
+   way it writes, while an agent asked to cut something finds something to
+   cut.
 4. **Create top-down.** Feature first (`createFeature`, optionally with
    `projectRefs`), then its requirements (`createRequirement` needs the
    `featureRef` from the create response), then acceptance criteria under each
