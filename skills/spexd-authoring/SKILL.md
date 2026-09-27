@@ -691,9 +691,14 @@ the task exists to commission is not.
   care about by id with `getCommentThreads` (the `threadId`s come from
   `readDocument`, which already tells you each thread's status and location, so
   settled threads need never be fetched). Comments never change content and are
-  accepted on an entity in any status. **Resolving, reopening or deleting a
-  thread is human-only** — an agent may take part in a discussion but never
-  close one down.
+  accepted on an entity in any status. **Resolve a thread with
+  `resolveCommentThread` only after replying in it** with how its point was
+  addressed — reply first, then resolve. A bare resolve leaves a person unable
+  to tell whether the point was settled or dismissed. Resolving removes
+  nothing: every message stays readable, and a person can reopen the thread.
+  Resolve only a thread whose point you addressed; a question you raised for a
+  person is theirs to settle. **Never reopen or delete a thread** — overturning
+  a closure or removing a discussion is a person's call, with no exception.
 - **The record is readable.** `listVersions` gives an entity's timeline newest
   first — published versions interleaved with status transitions, approval
   decisions and approval retirements, each entry tagged with its `kind`, and

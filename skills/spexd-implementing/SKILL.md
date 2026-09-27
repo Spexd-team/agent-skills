@@ -230,8 +230,11 @@ it's meant to work before touching code.
   question sits on the sentence that's wrong, and it stays there for a human
   after your session ends. Comments are accepted on an entity in any status, so
   this works even once implementation has locked the chain and edits are
-  refused. You may start and reply to threads; **resolving or closing one is
-  human-only**.
+  refused. You may start and reply to threads, and resolve one with
+  `resolveCommentThread` only once its point is addressed and you have replied
+  in it saying how. A question you raised about a wrong design is not yours to
+  resolve: a person answers it by amending the design, so leave it for them.
+  **Never reopen or delete a thread.**
 
 ### 5. Reflect status — keep the task's lifecycle honest
 

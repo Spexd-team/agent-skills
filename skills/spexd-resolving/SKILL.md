@@ -376,9 +376,15 @@ An overlapping or ambiguous span is rejected.
 **Neither a task nor a comment touches the document's content**, so this
 disposition runs no cascade and needs no publish.
 
-A raised task's thread is never closed by this procedure. It is the record of
-why the task exists, and it stands until a person resolves it — resolving a
-thread is human-only.
+A raised task's thread is never resolved by this procedure. It is the record of
+why the task exists, and its point is not addressed until that task lands — so
+it stays open.
+
+Where a correction you publish does settle what an existing open thread on the
+design asked for, reply in that thread first, saying how its point was
+addressed, and only then resolve it with `resolveCommentThread`. A resolve with
+no reply leaves a person unable to tell settled from dismissed. **Never reopen
+or delete a thread.**
 
 ### On a criterion
 
