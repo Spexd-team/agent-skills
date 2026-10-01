@@ -598,20 +598,27 @@ the task exists to commission is not.
   There is no `invalidateAnyway` tool and `confirmPublish` takes no
   overrides: invalidating something the assessment spared is **human-only**.
   If you disagree with a sparing, leave it in place and say so.
-- **Acceptance-criterion writes are the other cascade trigger.**
+- **Acceptance-criterion writes are draft edits, not publishes.**
   `createAcceptanceCriterion` / `updateAcceptanceCriterion` /
-  `deleteAcceptanceCriterion` also write nothing on the first call: editing a
-  criterion rolls its requirement's version, which can invalidate the designs
-  and tasks approved against it, so each returns the same kind of proposal
-  and redeems through the same `confirmPublish`. The confirm returns the
-  **owning requirement** — the entity whose version moved — and, on a create
-  or an update, the criterion it wrote alongside it in `criterion`. Read the
-  new `AC-n` from there: it is claimed inside the confirm's transaction (which
-  is why the proposal names a new criterion by title rather than by reference),
-  so the confirm response is the only place it reaches you — don't re-list the
-  requirement's criteria and match on title. A delete carries no `criterion`,
-  having written no row. A frozen requirement is rejected with a 409 at the
-  confirm.
+  `deleteAcceptanceCriterion` each write in **one call**, with no proposal and
+  no `confirmPublish` to follow. A criterion lives in its requirement's
+  document, so the write edits that requirement's draft: it rolls no version,
+  cascades to nothing and invalidates no approval. A create answers with the
+  criterion it wrote, numbered `AC-n` — read the new reference from that
+  response; don't re-list the requirement's criteria and match on title. A
+  frozen requirement refuses the write with a 409.
+  - **The criteria reach a version when the requirement is published.** Write
+    all of them first, then publish the requirement once (`publishDocument`,
+    then `confirmPublish`). That version carries the body and the criteria as
+    one change, and its cascade is where anything approved against the
+    requirement can be invalidated. Don't publish after each criterion.
+  - **Until then, a new or changed criterion is a draft.**
+    `listAcceptanceCriteria` and `getRequirementCriteria` answer the
+    **published** set, and design coverage (`createDesign`'s
+    `acceptanceCriteriaRefs`, `addDesignCoverage`, `replaceDesignCoverage`)
+    accepts only a published criterion — naming a draft one is refused with a
+    404. `readDocument` on the requirement returns the draft's criteria in its
+    `criteria` field.
 - **Design coverage is a separate, cheap write.** Which ACs a design fulfils
   is *not* part of its document and does not roll a version or move it in the
   chain. Set it at creation with `createDesign`'s `acceptanceCriteriaRefs`, or
@@ -745,9 +752,10 @@ the task exists to commission is not.
 4. **Create top-down.** Feature first (`createFeature`, optionally with
    `projectRefs`), then its requirements (`createRequirement` needs the
    `featureRef` from the create response), then acceptance criteria under each
-   requirement — each a two-call step, `createAcceptanceCriterion` to propose
-   and `confirmPublish` to write — then designs under each requirement
-   (`createDesign` takes the `requirementRef`, plus `acceptanceCriteriaRefs`
+   requirement — one `createAcceptanceCriterion` call each, then **publish the
+   requirement** (`publishDocument`, then `confirmPublish`) so its criteria
+   reach the published set a design can cover — then designs under each
+   requirement (`createDesign` takes the `requirementRef`, plus `acceptanceCriteriaRefs`
    for the criteria it fulfils, which must be that requirement's own), then
    tasks under each design (`createTask` takes the `designRef`). **Link the
    repositories as you go** — `linkEntityRepository` on every design (each repo
