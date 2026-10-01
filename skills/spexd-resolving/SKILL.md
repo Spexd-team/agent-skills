@@ -62,7 +62,7 @@ the reader four decisions where they have one.
 | Findings to decide | one per actionable point, or one where the summary is all there is | **always exactly one** |
 | Verdict vocabulary | `accurate` / `stale` / `contradicts` / `unverified` | `proven` / `unproven` / `contradicted` / `not_implemented` / `unverified` |
 | Read it with | `getEntity` + `readDocument` | `getEntity` on the requirement + `getRequirementCriteria` |
-| Correcting it writes | the passage, in the live draft, then one publish | the criterion's own given/when/then, as one propose-and-confirm |
+| Correcting it writes | the passage, in the live draft, then one publish | the criterion's own given/when/then, in its requirement's draft, then one publish of the requirement |
 | The version that rolls | the design's | the **owning requirement's** |
 | Raising work writes | a task beneath the design, plus a comment anchored at the passage | a task beneath a design that fulfils the criterion, and **no comment** |
 | The re-review names | `DES-70` | `REQ-4/AC-3` |
@@ -109,8 +109,9 @@ optimised; one that is just a list gets shortened by the first model in a hurry.
    criterion there is no arithmetic**, so this is one sentence saying what you
    are about to do — still a statement, still no go-ahead asked.
 4. **Apply every correction to the live draft.** All of them. No publish yet.
-   **A criterion has no draft**: its correction is the propose of step 7, so
-   steps 4 and 7 are one call there rather than two stages.
+   **On a criterion** the correction is one `updateAcceptanceCriterion`, which
+   writes into the owning requirement's draft; step 7 then publishes that
+   requirement.
 5. **Raise each task.**
 6. **Anchor each task's comment.** *Corrections before tasks, tasks before
    comments.* A comment anchors by exact quoted text against the document that
@@ -337,8 +338,10 @@ correcting it is rewriting them.
    is a true, still-testable outcome, not a description of the implementation.
 
 **One call settles it**, because there is one finding:
-`updateAcceptanceCriterion({ requirementRef, reference, ...fields })` returns a
-proposal and writes nothing — see [Publishing](#publishing).
+`updateAcceptanceCriterion({ requirementRef, reference, ...fields })` writes the
+reworded fields into the owning requirement's draft and returns the criterion.
+It rolls no version: the correction reaches one when the requirement is
+published — see [Publishing](#publishing).
 
 **Never reach for `editDocument` here**, and never edit the requirement's body to
 "fix" a criterion: the criterion is not in that document, so an edit that appears
@@ -420,8 +423,9 @@ somewhere it does not belong, and don't silently fall back to leaving it.
 
 ## Publishing
 
-Both subjects publish as **propose then confirm**, and on both the propose writes
-nothing. What differs is which call makes the proposal, and which version rolls.
+Both subjects publish as **propose then confirm** — `publishDocument`, then
+`confirmPublish` — and on both the propose writes nothing. What differs is which
+entity you publish, and so which version rolls.
 
 ### A design
 
@@ -449,18 +453,27 @@ it with them — invalidating something the cascade spared is reserved to people
 
 ### A criterion
 
-**There is no `publishDocument` call.** The criterion write *is* the proposal:
+**The reword is not the publish.** `updateAcceptanceCriterion` wrote the fields
+into the owning requirement's draft and rolled nothing, and the re-review judges
+the **published** criterion — so if the reword landed, publish the requirement:
 
-1. **`updateAcceptanceCriterion({ requirementRef, reference, ...fields })`** —
-   this writes nothing. It returns the cascade the change would perform and a
-   single-use token valid for an hour.
+1. **`publishDocument({ reference: <the owning requirement>, baseVersion })`** —
+   `baseVersion` is the requirement's published head from `readDocument`. **This
+   writes nothing.** It returns the cascade and a single-use token valid for an
+   hour.
 2. **`confirmPublish({ token })`** — this is what writes.
 
 **Read the proposal's depth-0 outcome carefully: it is the owning REQUIREMENT,
-not the criterion.** Editing a criterion rolls its requirement's version, which
-is what can invalidate the designs and tasks approved against that requirement.
-So the reader is told about a version they did not name and descendants they may
-not have been thinking about, and they need that in the report.
+not the criterion.** Publishing the requirement rolls its version, which is what
+can invalidate the designs and tasks approved against it. So the reader is told
+about a version they did not name and descendants they may not have been thinking
+about, and they need that in the report.
+
+**The publish carries the requirement's whole draft**, not only the reword: a
+collaborator's unpublished change to its body or its other criteria goes out in
+the same version. `readDocument` on the requirement shows the draft, its
+`criteria` included — if the version would carry anything beyond the reword, tell
+the reader before confirming.
 
 The rest is the design's rules unchanged: always two calls even when the proposal
 invalidates nothing, not confirming *is* cancelling, no `skipAssessment`, and no
@@ -468,9 +481,8 @@ overruling an outcome on the confirm. And **once** — one finding means one
 proposal and one confirm, so a second propose in the same run means something has
 gone wrong; stop rather than publishing twice.
 
-A confirm is rejected with a 409 if the requirement is frozen by its lifecycle
-status. That is the ordinary refusal, and it refuses the *requirement*, not the
-criterion.
+A frozen requirement refuses the reword itself with a 409. That is the ordinary
+refusal, and it refuses the *requirement*, not the criterion.
 
 ## Reporting
 
@@ -502,7 +514,7 @@ resolves to nothing at all.
 It judges the version that now exists; asked any earlier it would judge the one
 being replaced. It cannot be refused as a duplicate here, because the publish
 made a new version and the subject therefore differs — a criterion's verdict is
-dated by its **owning requirement's** version, which the correction rolled.
+dated by its **owning requirement's** version, which publishing the correction rolled.
 
 A review writes nothing to the entity — no content, no version, no status, no
 approval — so it is not a gated write and it does not differ between the modes.
@@ -521,7 +533,7 @@ shows it.
 | **An edit batch is rejected** | Nothing was applied. Re-search for the passage and resend the whole batch; don't split it up to get part of it through. |
 | **The document is frozen by its lifecycle status** | The corrections are refused by the write path, in the ordinary way and with the ordinary message. Say which findings could not be settled that way — any tasks and comments still stand. |
 | **The conversation is resumed later** | Every decision is a turn in it. Read back what was already decided and carry on from there rather than asking again. |
-| **A criterion, and the reader rewords it** | One `updateAcceptanceCriterion` and one `confirmPublish`. There is no `editDocument` and no `publishDocument` — reaching for either means you are editing the wrong thing. |
+| **A criterion, and the reader rewords it** | One `updateAcceptanceCriterion`, then one `publishDocument` of the owning requirement and its `confirmPublish`. There is no `editDocument` — reaching for it means you are editing the wrong thing. |
 | **A criterion, and nothing fulfils it** | There is no design to raise a task beneath. Say so and put it to the reader — a design to raise it under, or leave the finding. Never invent one. |
 | **A criterion whose points describe different outcomes** | The criterion is doing two jobs. Say so, settle the finding as one, and offer splitting it into two criteria as separate work — never as a fourth disposition. |
 | **A criterion, and the reader leaves it** | Nothing at all, exactly as on a design — no reword, no task, no publish, no review. |
@@ -609,8 +621,9 @@ saying they do not want those cards.
    the finding touches, held to `spexd-authoring`'s Acceptance Criteria rules.
 7. Work raised: `createTask` beneath a design that fulfils it, naming the
    criterion and carrying the finding. No comment.
-8. If it was reworded: read the proposal — **its depth-0 outcome is the owning
-   requirement** — then `confirmPublish`. Once.
+8. If it was reworded: `publishDocument` on the owning requirement, read the
+   proposal — **its depth-0 outcome is the requirement** — then
+   `confirmPublish`. Once.
 9. Report the fields as they now read, which requirement's version rolled, and
    which of its descendants lost or kept their approval.
 10. `requestReview({ reference: 'REQ-4/AC-3' })` — the qualified form — and say

@@ -133,9 +133,11 @@ for altitude; and the two rules above. A prompt template:
 > one condition each, golden path *and* the important failure/edge paths as
 > **separate** criteria. Here you may use judgement and go beyond today's
 > behaviour: describe what a correct implementation *should* guarantee, not only
-> what the current code does. `createAcceptanceCriterion` under each requirement,
-> then `confirmPublish` with the token it returns — the create alone writes
-> nothing. Prefer measurable outcomes over adjectives.
+> what the current code does. `createAcceptanceCriterion` under each requirement
+> (one call each — it writes the criterion into the requirement's draft), then
+> publish each requirement once (`publishDocument`, then `confirmPublish`) so its
+> criteria reach the published set the designs will cover. Prefer measurable
+> outcomes over adjectives.
 >
 > Create everything in **DRAFT** — do not transition any status. Return the
 > requirement and AC references you created, plus any capability you noticed
@@ -227,7 +229,10 @@ consistent.
   calls, and during an import the proposal is usually empty — everything you
   create is `DRAFT`, so there is rarely an approved descendant to invalidate —
   but the confirm is still required, and skipping it means nothing was
-  published. `createAcceptanceCriterion` proposes and confirms the same way.
+  published. `createAcceptanceCriterion` is different: it is one call that
+  writes the criterion into its requirement's draft, with nothing to confirm.
+  The criteria reach the published set when the requirement is published, and
+  a design can only cover a published criterion.
   References are
   server-generated and **unique across the org** — read them from the create
   response and never invent them. A bare reference resolves on its own, so
