@@ -574,8 +574,22 @@ the task exists to commission is not.
   those invalidations, in one transaction. It is **always two calls**, even
   when the proposal invalidates nothing. Don't publish after every micro-edit:
   finish a coherent set of changes, then publish once.
+- **Always finish by publishing — never leave authored content in the live
+  draft.** Once a coherent set of edits to an entity is done, propose and
+  confirm the publish. An unpublished draft is invisible to everything that
+  reads the record (the published version, search, the cascade, reviews and
+  implementers), so the work isn't finished until it lands. That holds even
+  when the proposal would invalidate an approved entity or its approved
+  descendants: invalidation is the intended consequence of changing approved
+  spec, not a reason to hold the change back. Review the outcome set (below),
+  confirm, then **report what was invalidated** — see *Reporting a publish*.
+  The only reasons to stop short are a stale or failing confirm you must
+  re-propose, or an edit the user told you not to publish; say so explicitly
+  rather than leaving a draft behind silently.
 - **Not confirming is cancelling.** Let the token expire and nothing was
-  written — there is nothing to discard and no cancel tool.
+  written — there is nothing to discard and no cancel tool. That is a way to
+  abandon a proposal you reviewed and found wrong (and then fix the draft and
+  re-propose), not a way to park finished content.
 - **`baseVersion` is advisory.** Still required on the propose, and still the
   published head from `readDocument`, but it records what you edited against
   rather than gating the write — the publish targets the current head. The
@@ -598,6 +612,17 @@ the task exists to commission is not.
   There is no `invalidateAnyway` tool and `confirmPublish` takes no
   overrides: invalidating something the assessment spared is **human-only**.
   If you disagree with a sparing, leave it in place and say so.
+- **Reporting a publish.** After `confirmPublish`, tell the user what the
+  publish did, so they can address the knock-on work. List **every entity the
+  confirm invalidated** (from the cascade's outcomes — the ones it actually
+  applied, including the published entity's own status if it moved), each as
+  a markdown link on its reference (`viewUrl`) with its title and the reason
+  the outcome gave, grouped by kind. Name `not_assessed` ones as such — they
+  were invalidated by default, not judged affected — and say which descendants
+  were spared. If nothing was invalidated, say that in one line. Don't fix
+  them yourself or re-approve anything: approval is human-only, and what an
+  invalidated entity needs (re-review, an edit, cancellation) is the user's
+  call.
 - **Acceptance-criterion writes are draft edits, not publishes.**
   `createAcceptanceCriterion` / `updateAcceptanceCriterion` /
   `deleteAcceptanceCriterion` each write in **one call**, with no proposal and
@@ -779,6 +804,9 @@ the task exists to commission is not.
    task carries its repository** (`listEntityRepositories`), and **no entity
    contains implementation code** — an excerpt of existing code is fine, a
    ready-to-paste implementation is not. `listInbox` is the quick cross-cutting
-   check that everything landed in the status you expected. Report what was created and anything cancelled — each
+   check that everything landed in the status you expected, and that **nothing is
+   left unpublished** — every entity you edited has had its publish confirmed.
+   Report what was created and anything cancelled — plus anything a publish
+   invalidated, per *Reporting a publish* — each
    as a **link** (`viewUrl`) on its reference, with its title, never a bare
    list of references.
