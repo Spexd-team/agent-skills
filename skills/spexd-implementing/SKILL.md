@@ -173,25 +173,22 @@ it's meant to work before touching code.
 ### 4. Pre-start check — is this still safe to build?
 
 A task can be approved and still be a poor thing to start: it may have been
-claimed, the design above it may have moved on since, or a comment may have
+already been started, the design above it may have moved on since, or a comment may have
 raised something the body never absorbed. Starting implementation locks the
 chain, so this is the cheapest moment to find out. **Run all three checks, and
 report the outcome before you transition the task or cut a branch.** Most of
 what you need is already in hand from steps 1–3; the rest is a cheap read away.
 
-**a. Status — is the task ready, and is it yours?** Read the task's `status`
+**a. Status — is the task ready to build?** Read the task's `status`
 from `getEntity`/`readDocument` (fresh, not remembered from earlier in the
 session).
 
 - `APPROVED` is the only ready state. Anything else is a flag: `DRAFT`,
-  `READY_FOR_REVIEW` or `INVALIDATED` is a spec that isn't signed off; `CANCELLED` or `COMPLETED` is work that shouldn't be
-  redone.
-- `IMPLEMENTATION_STARTED` or `PR_RAISED` means someone — or an earlier session
-  of yours — already has it. Check `listTaskPullRequests` and
-  `listEntityRepositories` for a branch or PR, and `getContributors`/
-  `listVersions` for who touched it, and say what you found rather than
-  starting a second attempt. Resuming your own work is fine and is not a flag; duplicating
-  someone else's is.
+  `READY_FOR_REVIEW` or `INVALIDATED` is a spec that isn't signed off;
+  `CANCELLED` or `COMPLETED` is work that shouldn't be redone.
+- `IMPLEMENTATION_STARTED` or `PR_RAISED` means work on it is already under
+  way. Check `listTaskPullRequests` and `listEntityRepositories` for an existing
+  branch or PR, and say what you found rather than starting a second attempt.
 - Glance at the ancestors' statuses from the same `getEntities` call. A
   `CANCELLED` or `INVALIDATED` design, requirement or feature under an
   `APPROVED` task is a flag. (`LOCKED` ancestors are normal once implementation
@@ -522,7 +519,7 @@ raise the design problem the way step 5 of the loop describes.
 3. Read the full ancestor chain (design → ACs → requirement → feature) before
    coding — one batched `readDocument` for the bodies, `getDesignCoverage` for
    the exact AC set you owe.
-4. Run the pre-start check: the task is `APPROVED` and unclaimed with nothing on
+4. Run the pre-start check: the task is `APPROVED` and not already started, with nothing on
    its `**Depends on:**` line outstanding; no open comment thread bears on it;
    the task still meets its parent design. Report it — if anything is flagged,
    stop and ask rather than forcing a transition or building out of order.
