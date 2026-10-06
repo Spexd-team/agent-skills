@@ -4,7 +4,9 @@ description: >-
   Implement software tasks using Spexd as the source of context — pull a task
   and its full traceability chain (task → design → acceptance criteria →
   requirement → feature) via the Spexd MCP tools (mcp__Spexd__*), open by
-  reporting the entity's link, title and a concise summary, build to that
+  reporting the entity's link, title and a concise summary, run a pre-start
+  check (task status, open comments, still consistent with its parent design)
+  and flag anything before starting, build to that
   spec, and reflect progress back onto the task's lifecycle status. Given a
   parent entity instead — a feature, requirement or design — expand it into its
   tasks, order them, and ship one branch and one PR per task. Use when
@@ -44,9 +46,10 @@ feature, split a requirement, draft acceptance criteria — that's
 
 ## The loop
 
-Implementing a task is five steps: **find the work → orient → gather the
-context → build → reflect status.** Never skip straight from "find" to
-"build" — the context above the task is what makes the implementation correct.
+Implementing a task is six steps: **find the work → orient → gather the
+context → pre-start check → build → reflect status.** Never skip straight from
+"find" to "build" — the context above the task is what makes the implementation
+correct, and the pre-start check is what confirms that context still holds.
 
 ### 1. Find the work
 
@@ -167,7 +170,84 @@ never made it into the body lives. Pull the ones that look relevant with
 Read enough of the chain that you could explain *why* the task exists and *how*
 it's meant to work before touching code.
 
-### 4. Build
+### 4. Pre-start check — is this still safe to build?
+
+A task can be approved and still be a poor thing to start: it may have been
+claimed, the design above it may have moved on since, or a comment may have
+raised something the body never absorbed. Starting implementation locks the
+chain, so this is the cheapest moment to find out. **Run all three checks, and
+report the outcome before you transition the task or cut a branch.** Everything
+you need is already in hand from steps 1–3 or one cheap read away.
+
+**a. Status — is the task ready, and is it yours?** Read the task's `status`
+from `getEntity`/`readDocument` (fresh, not remembered from earlier in the
+session).
+
+- `APPROVED` is the only ready state. Anything else is a flag: `DRAFT`,
+  `READY_FOR_REVIEW`, `INVALIDATED` or a task needing changes is a spec that
+  isn't signed off; `CANCELLED` or `COMPLETED` is work that shouldn't be
+  redone.
+- `IMPLEMENTATION_STARTED` or `PR_RAISED` means someone — or an earlier session
+  of yours — already has it. Check `listTaskPullRequests` and
+  `listEntityRepositories` for a branch or PR, and `getContributors`/
+  `listVersions` for who touched it, and say what you found rather than
+  starting a second attempt. Resuming your own work is fine; duplicating
+  someone else's is not.
+- Glance at the ancestors' statuses from the same `getEntities` call. A
+  `CANCELLED` or `INVALIDATED` design, requirement or feature under an
+  `APPROVED` task is a flag. (`LOCKED` ancestors are normal once any sibling
+  task has started.)
+- Check the task's `**Depends on:**` line: anything it names that isn't yet
+  `COMPLETED` (or whose PR you'd have to stack on) is a flag if it hasn't been
+  accounted for in the order you stated.
+
+**b. Comments — has anyone said something the body doesn't reflect?** The
+`commentThreads` returned by `readDocument` in step 3 already list them for the
+task, design, requirement and feature; pull the open ones with
+`getCommentThreads`. Flag any **unresolved** thread that:
+
+- questions, disputes or caveats something this task builds, or the design
+  mechanism it follows;
+- was raised **after** the task's last approval or version (compare against
+  `listVersions`), since the body can't have absorbed it; or
+- is an earlier implementer's or reviewer's unanswered question.
+
+Resolved threads need no flag, but read their last reply — a resolution that
+says "design to change" with no matching design edit is a flag too.
+
+**c. Alignment — does the task still meet its parent design?** Read the task
+body against the design body and `getDesignCoverage`, and check:
+
+- the task describes a change the design's mechanism actually supports — same
+  components, contracts, data model and boundaries, nothing the design is
+  silent on or contradicts;
+- the design hasn't been **republished since the task was last approved**: use
+  `listVersions` on both and, if it has, `compareVersions` on the design to see
+  what moved and whether the task (or its tests) still follows;
+- the acceptance criteria the design fulfils (`getDesignCoverage`) are all
+  covered by what the task says to build and test — no criterion with nothing
+  in the task answering it, and nothing in the task answering a criterion this
+  design doesn't own.
+
+**Then flag, don't fix.** Report the result in one of two shapes:
+
+- **Clear** — one line: *Pre-start check: task `APPROVED`, no open threads
+  bearing on it, design unchanged since approval and consistent with the task.*
+  Carry on to step 5.
+- **Flagged** — a short list, each item with its link, what you saw and why it
+  matters (e.g. *"[DES-9](…) was republished after [TASK-12](…) was approved:
+  the ride state machine now has a `DISPATCHED` state the task doesn't mention"*).
+  **Stop there**: don't transition the task, don't branch, don't build, and ask
+  how to proceed. The user may well say "carry on" — a flag is a question, not a
+  veto — but that is their call, and it gets made before the chain locks.
+
+Don't repair what you flag. The task, design and criteria are the spec, and
+fixing them is authoring's job (see the design-gap handling in step 5). If a
+finding needs a durable home beyond this conversation, `createCommentThread` on
+the affected entity — anchored with `quotedText` — records it for the humans
+after your session ends.
+
+### 5. Build
 
 - Implement to the **design's** mechanism and the **task's** definition of done.
   Satisfy **every** acceptance criterion in the design's AC set, golden path and
@@ -236,14 +316,15 @@ it's meant to work before touching code.
   resolve: a person answers it by amending the design, so leave it for them.
   **Never reopen or delete a thread.**
 
-### 5. Reflect status — keep the task's lifecycle honest
+### 6. Reflect status — keep the task's lifecycle honest
 
 A task carries an implementation sub-flow that the rest of the chain reads, so
 it must move as the work moves:
 
 - **`APPROVED → IMPLEMENTATION_STARTED`** — **the moment work starts, and you
   make this move yourself.** "Starts" means when you begin building: after
-  you've read the chain and decided this is the task, before the branch exists
+  you've read the chain, passed the pre-start check and decided this is the
+  task, before the branch exists
   and before the first edit. Don't wait for a branch push to trigger it — that
   leaves the task sitting `APPROVED` while files are already changing, so
   anyone reading Spexd sees the work as unclaimed when it isn't, and two agents
@@ -373,7 +454,7 @@ dependency isn't done, the slice can't merge without dead paths — **stop at
 that task and surface it**. Don't skip it and stack the remaining tasks on the
 gap; the branch below it would then carry work whose foundation isn't agreed.
 Land what's already reviewable, say which task you stopped on and why, and
-raise the design problem the way step 4 of the loop describes.
+raise the design problem the way step 5 of the loop describes.
 
 ## Operational notes (MCP surface)
 
@@ -439,12 +520,13 @@ raise the design problem the way step 4 of the loop describes.
    — then run steps 2–8 once per task, stacking each branch on the last.
 2. Report it back first: **link (`viewUrl`) + title + concise summary**, before
    any plan or code.
-3. Confirm it's ready to build (`APPROVED`), and that nothing on its
-   `**Depends on:**` line is still outstanding; if either is unmet, surface the
-   gap rather than forcing a transition or building out of order.
-4. Read the full ancestor chain (design → ACs → requirement → feature) before
+3. Read the full ancestor chain (design → ACs → requirement → feature) before
    coding — one batched `readDocument` for the bodies, `getDesignCoverage` for
    the exact AC set you owe.
+4. Run the pre-start check: the task is `APPROVED` and unclaimed with nothing on
+   its `**Depends on:**` line outstanding; no open comment thread bears on it;
+   the task still meets its parent design. Report it — if anything is flagged,
+   stop and ask rather than forcing a transition or building out of order.
 5. `transitionEntityStatuses` the task to `IMPLEMENTATION_STARTED` as work
    begins — before the branch, not after the push — then branch, with exactly
    one task reference in the name.
