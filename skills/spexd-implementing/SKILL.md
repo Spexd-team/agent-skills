@@ -173,7 +173,7 @@ it's meant to work before touching code.
 ### 4. Pre-start check — is this still safe to build?
 
 A task can be approved and still be a poor thing to start: it may
-have already been started, the design above it may have moved on since, or a comment may have
+have already been started, the task may not match its design, or a comment may have
 raised something the body never absorbed. Starting implementation locks the
 chain, so this is the cheapest moment to find out. **Run all three checks, and
 report the outcome before you transition the task or cut a branch.** Most of
@@ -208,31 +208,25 @@ task, design, requirement and feature; pull the open ones with
   `listVersions`), since the body can't have absorbed it; or
 - is an earlier implementer's or reviewer's unanswered question.
 
-Resolved threads need no flag, but read their last reply — a resolution that
-says "design to change" with no matching design edit is a flag too.
+A resolved thread is settled; don't revisit it.
 
 **c. Alignment — does the task still meet its parent design?** Read the task
-body against the design body and `getDesignCoverage`, and check:
-
-- the task describes a change the design's mechanism actually supports — same
-  components, contracts, data model and boundaries, nothing the design is
-  silent on or contradicts;
-- the design hasn't been **republished since the task was last approved**: use
-  `listVersions` on both and, if it has, `compareVersions` on the design to see
-  what moved and whether the task (or its tests) still follows;
-- the acceptance criteria the design fulfils (`getDesignCoverage`) are all
-  covered by what the task says to build and test — no criterion with nothing
-  in the task answering it, and nothing in the task answering a criterion this
-  design doesn't own.
+body against the design body and check that the task describes a change the
+design's mechanism actually supports — same components, contracts, data model
+and boundaries, nothing the design is silent on or contradicts. Don't flag a design merely for having been
+republished: a change to a parent that affected the task would already have
+invalidated it. Acceptance criteria may be split across several tasks, so a
+criterion the task doesn't cover is not a mismatch.
 
 **Then flag, don't fix.** Report the result in one of two shapes:
 
 - **Clear** — one line: *Pre-start check: task `APPROVED`, no open threads
-  bearing on it, design unchanged since approval and consistent with the task.*
+  bearing on it, task consistent with its design.*
   Carry on to step 5.
 - **Flagged** — a short list, each item with its link, what you saw and why it
-  matters (e.g. *"[DES-9](…) was republished after [TASK-12](…) was approved:
-  the ride state machine now has a `DISPATCHED` state the task doesn't mention"*).
+  matters (e.g. *"[TASK-12](…) builds the ride state machine as three
+  states, but [DES-9](…) specifies a fourth, `DISPATCHED`, that the task never
+  mentions"*).
   **Stop there**: don't transition the task, don't branch, don't build, and ask
   how to proceed. The user may well say "carry on" — a flag is a question, not a
   veto — but that is their call, and it gets made before the chain locks.
