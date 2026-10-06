@@ -49,6 +49,11 @@ grounding, and fan-out.
    `transitionEntityStatuses` to advance entities toward review/approval;
    leaving them in `DRAFT` is the point. (Approval is a human-only action
    regardless — an agent cannot move anything to `APPROVED` even if it tries.)
+   An import creates no tasks, with **one exception**: a follow-up task for an
+   ambiguity the evidence cannot settle (see *Follow-up tasks for unresolved
+   ambiguity*), which also lands in `DRAFT` and is never transitioned. It is
+   never a copy of work found in the sources — tickets, subtasks and checklists
+   are not imported as tasks.
 
 ## The shape of an import
 
@@ -139,8 +144,17 @@ for altitude; and the two rules above. A prompt template:
 > criteria reach the published set the designs will cover. Prefer measurable
 > outcomes over adjectives.
 >
+> Where a point the sources leave open stops a reviewer accepting a
+> requirement or criterion as written, raise a follow-up task under that
+> requirement as the skill's *Follow-up tasks for unresolved ambiguity* section
+> describes — never a task copied from the sources' own tickets, subtasks or
+> checklists. A question that also reaches into another feature is not yours to
+> raise: report it instead, and the orchestrator raises it once.
+>
 > Create everything in **DRAFT** — do not transition any status. Return the
-> requirement and AC references you created, plus any capability you noticed
+> requirement and AC references you created, the references of any follow-up
+> tasks you raised, any cross-feature question you held back, plus any
+> capability you noticed
 > that seems to belong to a *different* feature (so the orchestrator can place
 > it), and any architectural seams you spotted (to inform the design phase).
 
@@ -195,15 +209,68 @@ Split along **architectural seams**, not one-per-requirement by reflex.
    at once). Coverage is a pure structural write — it rolls no version and
    moves nothing in the chain. To confirm nothing is uncovered, page
    `listAcceptanceCriteria` for each requirement and look for a criterion with
-   an empty `fulfilledBy`. (Tasks are out of scope for an import — leave
-   decomposition to `spexd-authoring`/`spexd-implementing` once humans have
-   reviewed.)
+   an empty `fulfilledBy`. (Decomposing designs into tasks is out of scope
+   for an import — leave it to `spexd-authoring`/`spexd-implementing` once
+   humans have reviewed. The only tasks an import raises are the follow-ups in
+   *Follow-up tasks for unresolved ambiguity*, and a design you write here
+   raises its own follow-ups by those rules.)
 
 You may fan out this phase too (a sub-agent per architectural seam), but keep
 the *linking* coherent from the orchestrator so the many-to-many wiring is
 consistent.
 
 ---
+
+## Follow-up tasks for unresolved ambiguity
+
+The sources will not settle everything. Write what the evidence supports and
+note the open point in the entity's body where it applies (rule 1). Then ask
+whether a reviewer could accept the entity as written without first answering a
+question the sources leave open — two sources giving different values for the
+same rule, a behaviour referenced but never specified, code and documentation
+disagreeing about what the system does. If not, raise a **follow-up task** with
+`createTask` once the entity it concerns exists. The design behind this rule is
+[DES-455](https://www.spexd.com/e/DES-455).
+
+- **Read further before raising one.** A point you could settle by reading
+  another file, page or ticket is read, not ticketed.
+- **A follow-up asks a question about the spec; it is never work found in the
+  sources.** A source ticket, subtask or checklist is not an ambiguity, however
+  unfinished it looks — it is not imported, as a follow-up or otherwise. If
+  every source is settled, an import creates no task at all.
+- **One ambiguity, one task.** Where the same question surfaces under several
+  entities, raise it once, placed by the table below.
+- **`DRAFT`, no transitions, no repository** — like everything else an import
+  writes. If `createTask` is refused, put the question in the closing report
+  instead, so it still reaches the reviewer.
+
+**Placement.** The task sits as low in the chain as the ambiguity reaches, so it
+appears beside the text a reviewer would change:
+
+| The ambiguity concerns | `parentRef` |
+|---|---|
+| A feature's scope or framing | That feature |
+| A requirement's body | That requirement |
+| An acceptance criterion | The criterion's requirement — a criterion cannot parent a task — with the criterion named as `REQ-n/AC-n` in the title or body |
+| A design | That design |
+| Several entities under one parent | Their nearest common ancestor |
+| Entities under different features | The entity whose text the resolution would change most, linking the others in the body |
+| A candidate left out for thin evidence | The created entity it would have sat under. A left-out *feature* has no parent that can hold a task, so record it in the project overview and the closing report instead |
+
+**The task.** Title it `Resolve ambiguous <subject> from Spexd import`, naming
+the subject concretely (`Resolve ambiguous refund window from Spexd import`) —
+one shape for ambiguities, gaps and conflicts alike, so the whole set is found
+with one search. The body carries:
+
+- **What is open** — the question a reviewer has to answer, in a sentence or two.
+- **Evidence** — each source that bears on it, linked, with what it says, so
+  the reviewer does not repeat your reading.
+- **Readings** — the candidate answers the evidence supports, where there is
+  more than one.
+- **What was written** — how the entity reads on this point now: the
+  provisional wording you chose, or that the point was left out.
+- **Done when** — the entity states the resolved answer and is published; the
+  task is then completed, or cancelled if the question proves moot.
 
 ## Operational notes
 
@@ -215,7 +282,9 @@ consistent.
 - **Grounding beats completeness.** A smaller set of well-evidenced entities is
   a better import than a sprawling one padded with guesses. If evidence is thin
   for a candidate, say so in the body or leave it out — don't manufacture
-  detail to fill the shape.
+  detail to fill the shape. Where the point is one a reviewer cannot accept the
+  entity without answering, also raise a follow-up task for it (see
+  *Follow-up tasks for unresolved ambiguity*).
 - **Everything DRAFT, no transitions.** Reiterated because it's easy to slip:
   `create*` is enough; never call `transitionEntityStatuses` during an import.
 - **MCP surface** (see `spexd-authoring` for the full editing/publishing model):
@@ -239,7 +308,9 @@ consistent.
   reading one back needs nothing else — `getEntity` (or `getEntities` for a
   batch), and the document tools and `listDescendants` alike. Only writes name a
   parent: `createRequirement` takes a `featureRef`, `createDesign` a
-  `requirementRef`, `createTask` a `designRef`.
+  `requirementRef`, and `createTask` a `parentRef`, which may be a feature, a
+  requirement or a design — so a follow-up task goes directly under the entity
+  its question concerns.
 - **`getEntity` never returns a body.** It and every other entity response are
   content-free — metadata, `viewUrl` and the ancestor chain only. When you need
   to read back what an entity actually says (checking a sub-agent's work, say),
@@ -257,8 +328,9 @@ consistent.
   a feature (or any entity) by its `github_repo_id` — so a reviewer of the
   import can see which codebase each feature was reverse-engineered from.
   Designs get this too, and it is not optional there: link every repository a
-  design's seam spans. Entities above a task accumulate repositories; a task
-  carries exactly one (and imports create no tasks).
+  design's seam spans. Entities above a task accumulate repositories; an
+  implementation task carries exactly one. A follow-up task carries **none**:
+  resolving it is an edit to the specification, not a change to code.
 
 ## Process checklist
 
@@ -270,17 +342,22 @@ consistent.
    **requirements**, then judgement-based **acceptance criteria**, created under
    its feature.
 4. **Reconcile** the sub-agents' reports; place any cross-feature rules; collect
-   the architectural-seam notes.
+   the architectural-seam notes. Reconcile the follow-ups too: where sub-agents
+   reported the same cross-feature question, raise it as **one** task, placed by
+   the follow-up rules.
 5. **Design** across the requirements along architectural seams, grounded in the
    real codebase; link each design to the ACs it fulfils; confirm every AC is
-   covered.
+   covered. Raise a follow-up under any design the evidence leaves open.
 6. **Verify** the chain: `listProjectFeatures`, then one
    `listDescendants(FEAT-n, { maxDepth: -1 })` per feature — every requirement
    and design beneath it, each carrying its `parent` (acceptance criteria are
    not a chain level, so list them per requirement with `listAcceptanceCriteria`,
    which also shows each criterion's `fulfilledBy` coverage). Confirm every
    entity is `DRAFT`, nothing was transitioned, no implementation detail leaked
-   above Design, and nothing was invented beyond the AC exception. `listInbox`
-   with `view: "drafts"` is the fastest whole-org check that nothing escaped
-   `DRAFT`. Report the project and references created for human review, each as
-   a link on its `viewUrl`.
+   above Design, and nothing was invented beyond the AC exception. The only
+   `TASK`s beneath any feature are follow-ups — each `DRAFT`, each under the
+   entity it concerns, each titled `Resolve ambiguous … from Spexd import`.
+   `listInbox` with `view: "drafts"` is the fastest whole-org check that nothing
+   escaped `DRAFT`. Report the project and references created for human review,
+   each as a link on its `viewUrl`, and list the follow-up tasks separately, also
+   as links, so the reviewer has the open questions as one list to work through.
