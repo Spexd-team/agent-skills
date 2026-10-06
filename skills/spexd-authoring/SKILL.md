@@ -578,7 +578,7 @@ the task exists to commission is not.
   draft.** Once a coherent set of edits to an entity is done, propose and
   confirm the publish. An unpublished draft is invisible to everything that
   reads the record (the published version, search, the cascade, reviews and
-  implementers), so the work isn't finished until it lands. That holds even
+  implementers), so the work isn't finished until it lands. That holds for edits the user asked for, even
   when the proposal would invalidate an approved entity or its approved
   descendants: invalidation is the intended consequence of changing approved
   spec, not a reason to hold the change back. Review the outcome set (below),
@@ -806,7 +806,7 @@ the task exists to commission is not.
    ready-to-paste implementation is not. `listInbox` is the quick cross-cutting
    check that everything landed in the status you expected, and that **nothing is
    left unpublished** — every entity you edited has had its publish confirmed.
-   Report what was created and anything cancelled — plus anything a publish
-   invalidated, per *Reporting a publish* — each
+   Report anything a publish invalidated as *Reporting a publish* describes.
+   Report what was created and anything cancelled, each
    as a **link** (`viewUrl`) on its reference, with its title, never a bare
    list of references.

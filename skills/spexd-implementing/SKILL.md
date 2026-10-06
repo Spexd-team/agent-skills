@@ -176,27 +176,26 @@ A task can be approved and still be a poor thing to start: it may have been
 claimed, the design above it may have moved on since, or a comment may have
 raised something the body never absorbed. Starting implementation locks the
 chain, so this is the cheapest moment to find out. **Run all three checks, and
-report the outcome before you transition the task or cut a branch.** Everything
-you need is already in hand from steps 1–3 or one cheap read away.
+report the outcome before you transition the task or cut a branch.** Most of
+what you need is already in hand from steps 1–3; the rest is a cheap read away.
 
 **a. Status — is the task ready, and is it yours?** Read the task's `status`
 from `getEntity`/`readDocument` (fresh, not remembered from earlier in the
 session).
 
 - `APPROVED` is the only ready state. Anything else is a flag: `DRAFT`,
-  `READY_FOR_REVIEW`, `INVALIDATED` or a task needing changes is a spec that
-  isn't signed off; `CANCELLED` or `COMPLETED` is work that shouldn't be
+  `READY_FOR_REVIEW` or `INVALIDATED` is a spec that isn't signed off; `CANCELLED` or `COMPLETED` is work that shouldn't be
   redone.
 - `IMPLEMENTATION_STARTED` or `PR_RAISED` means someone — or an earlier session
   of yours — already has it. Check `listTaskPullRequests` and
   `listEntityRepositories` for a branch or PR, and `getContributors`/
   `listVersions` for who touched it, and say what you found rather than
-  starting a second attempt. Resuming your own work is fine; duplicating
-  someone else's is not.
+  starting a second attempt. Resuming your own work is fine and is not a flag; duplicating
+  someone else's is.
 - Glance at the ancestors' statuses from the same `getEntities` call. A
   `CANCELLED` or `INVALIDATED` design, requirement or feature under an
-  `APPROVED` task is a flag. (`LOCKED` ancestors are normal once any sibling
-  task has started.)
+  `APPROVED` task is a flag. (`LOCKED` ancestors are normal once implementation
+  has started anywhere on the chain.)
 - Check the task's `**Depends on:**` line: anything it names that isn't yet
   `COMPLETED` (or whose PR you'd have to stack on) is a flag if it hasn't been
   accounted for in the order you stated.
