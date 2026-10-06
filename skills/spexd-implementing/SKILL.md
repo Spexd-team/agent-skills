@@ -172,8 +172,8 @@ it's meant to work before touching code.
 
 ### 4. Pre-start check — is this still safe to build?
 
-A task can be approved and still be a poor thing to start: it may have been
-already been started, the design above it may have moved on since, or a comment may have
+A task can be approved and still be a poor thing to start: it may
+have already been started, the design above it may have moved on since, or a comment may have
 raised something the body never absorbed. Starting implementation locks the
 chain, so this is the cheapest moment to find out. **Run all three checks, and
 report the outcome before you transition the task or cut a branch.** Most of
