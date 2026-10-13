@@ -98,10 +98,10 @@ everything else hangs off.
    import, and the sources surveyed). Then `createFeature` for each capability,
    passing `projectRefs: [<projectRef>]` so it links on creation (or
    `addFeatureToProject` after). Write each feature body in product language per
-   `spexd-authoring` (overview, goals/non-goals, persona, scope, a `**Sources:**`
-   line pointing at the files/docs that evidence it). Check `listProjects` and
-   `listFeatures` / `listProjectFeatures` first to avoid duplicating an existing
-   home — a partial import of the same system may already be there.
+   `spexd-authoring` (overview, goals/non-goals, persona, scope, a closing
+   `**Sources:**` list linking the files/docs that evidence it). Check
+   `listProjects` and `listFeatures` / `listProjectFeatures` first to avoid
+   duplicating an existing home — a partial import of the same system may already be there.
 
 Capture the returned `featureRef` for every feature — those are the fan-out
 work items for Phase 2.
@@ -129,7 +129,7 @@ for altitude; and the two rules above. A prompt template:
 > capability, in product language ("the user can…", "every X must Y"). Ground
 > each one in what you observe; don't invent capabilities the code doesn't
 > show. For each, `createRequirement` under `<featureRef>` with a product-level
-> body and a `**Sources:**` line. Keep mechanism out (no vendors, tables,
+> body and a closing `**Sources:**` list. Keep mechanism out (no vendors, tables,
 > algorithms, or code — those wait for Design). Check `listDescendants` on
 > `<featureRef>` first to avoid duplicates.
 >
@@ -186,7 +186,8 @@ Split along **architectural seams**, not one-per-requirement by reflex.
    Phase 3 are a starting list.
 2. **Create one design per seam per requirement it serves**, each grounded in
    the codebase: state the mechanism as it actually exists (or is clearly
-   intended), citing the files/ADRs that evidence it in a `**Sources:**` line.
+   intended), citing the files/ADRs that evidence it in a closing
+   `**Sources:**` list.
    Follow `spexd-authoring`'s *What a good design covers* — the mechanism,
    the boundaries (including which repositories are involved), the **data model
    as a field/type/description table**, the contracts as a table, security,
