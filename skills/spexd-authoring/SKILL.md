@@ -328,12 +328,12 @@ absent because it doesn't apply, not because nobody thought about it.
   status carries all of that. Write the mechanism in the timeless present, as
   the design to build to, so it reads the same whether the work is unstarted
   or long shipped.
-- **Source-code files in the sources line.** Cite sources as the documents,
+- **Source-code files in the sources list.** Cite sources as the documents,
   ADRs, tickets, and links a reader navigates to for intent and decisions —
   not a list of implementation files (`server/…/foo.ts`). A file path is an
   implementation pointer that goes stale, not a source of the design. (Naming
   a specific file *inside the body* to pin a mechanism is fine — the
-  prohibition is on the sources line.)
+  prohibition is on the sources list.)
 - **Open questions you never asked.** An "Open questions" section is the
   easiest place to park a decision instead of making one, and it's designs
   that attract them. Before any such question goes into the document, **ask
@@ -375,8 +375,8 @@ This constrains decomposition more than size does — prefer a larger task that
 lands whole over two that leave the UI stranded between them.
 
 **Blocking comes first.** If a task can't start until other tasks are complete,
-say so on the **first line of the body**, before the sources line and everything
-else, so ordering is visible without reading the task:
+say so on the **first line of the body**, before everything else, so ordering
+is visible without reading the task:
 
 ```markdown
 **Depends on:** [TASK-14](https://www.spexd.com/e/TASK-14), [TASK-15](https://www.spexd.com/e/TASK-15)
@@ -420,9 +420,9 @@ the task exists to commission is not.
 
 - **Don't repeat the title in the body.** The title is a separate field in
   Spexd, shown above the content — starting the body with an `# <Title>`
-  heading just duplicates it. Begin the body with the sources line (below),
-  then the content. A task with blockers is the one exception: its
-  `**Depends on:**` line comes first, above the sources line.
+  heading just duplicates it. Begin the body with the content itself and close
+  it with the sources list (below). A task with blockers adds one thing at the
+  top: its `**Depends on:**` line comes first, above the content.
 - **Don't indicate status in the content.** An entity's state lives in its
   Spexd lifecycle status field (managed via `transitionEntityStatuses`), not in
   the body — no "Status:" line, no "shipped / planned / rejected" labels in the
@@ -432,12 +432,28 @@ the task exists to commission is not.
   entity: an unanswered question in an entity's body is a decision you didn't
   make and didn't ask about. Put it to the user first; only what they also
   couldn't settle stays in the document as an open question.
-- **Cite sources as links.** Lead with a sources line — Linear URLs for
-  tickets, repo links or paths for ADRs — so a reader can navigate straight
-  to the source; quote key phrases where they capture intent.
+- **Cite sources at the end, as a linked list.** Close the body with a
+  `**Sources:**` list — one bullet per source, each a markdown link so a reader
+  can navigate straight to it: Linear URLs for tickets, page URLs for external
+  docs, GitHub links for files such as ADRs. Lead with the content, not the
+  citations; quote key phrases in the body where they capture intent.
+
+  For a file in a repository, link a **GitHub permalink at the current commit**
+  rather than a bare path, so the link keeps pointing at the content you read
+  even after the file moves or changes. Infer it from the checkout:
+  `git remote get-url origin` gives the owner and repo, `git rev-parse HEAD`
+  the full commit hash, and the path is relative to the repository root —
+  `https://github.com/<owner>/<repo>/blob/<commit>/<path>`, with `#L<start>-L<end>`
+  appended to pin a line range. Fall back to the repo-relative path in
+  backticks only when no link can be inferred (no GitHub remote, or a file not
+  yet committed), and never invent a URL you can't derive.
 
   ```markdown
-  **Sources:** <Linear ticket(s)>, <ADR(s)>
+  **Sources:**
+
+  - [ENG-123 — Riders can schedule pickups](https://linear.app/acme/issue/ENG-123)
+  - [ADR-007 — Ride state machine](https://github.com/acme/rides/blob/3f9c2e1a7b4d8e6f0a1b2c3d4e5f6a7b8c9d0e1f/docs/adr/007-ride-state-machine.md)
+  - [Stripe Connect — destination charges](https://docs.stripe.com/connect/destination-charges)
   ```
 - **Always link a cross-reference, never leave it bare.** Whenever you name
   another entity — in an entity's body, in a comment, or in what you report
