@@ -220,6 +220,14 @@ You may fan out this phase too (a sub-agent per architectural seam), but keep
 the *linking* coherent from the orchestrator so the many-to-many wiring is
 consistent.
 
+4. **Report the import complete.** Once every design is drafted, call
+   `reportImportComplete` once, with no arguments.
+   - It records that this organization has imported, which is what completes
+     Spexd's setup import step. It drafts nothing and approves nothing.
+   - Call it only after a whole import, never after one phase or a partial run.
+   - Never call it from inside an in-product staged run: an in-product run
+     completes itself.
+
 ## In-product staged runs
 
 This section applies only when a turn names one of the stages below. Anyone
@@ -238,6 +246,8 @@ builds on.
 - **Call `useRepository` for each repository in scope** before reading code.
 - **Everything is drafted and never approved**
   ([REQ-83](https://www.spexd.com/e/REQ-83)), exactly as in the external route.
+- **No stage calls `reportImportComplete`.** An in-product run completes itself;
+  that call belongs to the external route's last step.
 
 *The two rules that govern an import* and the phases above still apply inside
 each stage; the subsections below say only what is specific to running one.
