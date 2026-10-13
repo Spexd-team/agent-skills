@@ -220,6 +220,79 @@ You may fan out this phase too (a sub-agent per architectural seam), but keep
 the *linking* coherent from the orchestrator so the many-to-many wiring is
 consistent.
 
+## In-product staged runs
+
+This section applies only when a turn names one of the stages below. Anyone
+following the skill end to end, outside Spexd's own assistant, ignores it and
+runs Phases 1–4 as written.
+
+This mode runs inside Spexd's own assistant, and nothing in it spawns
+sub-agents. A turn is bounded, so a stage arrives as one or more **units**. Each
+unit is a single message naming its stage, its subject and the references it
+builds on.
+
+- **The references are the only inputs.** Read each one with `getEntities` /
+  `readDocument` as it stands when the unit starts. A person may have renamed,
+  edited or cancelled it during the pause between stages
+  ([REQ-376/AC-2](https://www.spexd.com/e/REQ-376?ac=AC-2)).
+- **Call `useRepository` for each repository in scope** before reading code.
+- **Everything is drafted and never approved**
+  ([REQ-83](https://www.spexd.com/e/REQ-83)), exactly as in the external route.
+
+*The two rules that govern an import* and the phases above still apply inside
+each stage; the subsections below say only what is specific to running one.
+
+### Features stage
+
+Phase 1, for the whole scope.
+
+- **Input:** the repositories in scope, by `fullName`.
+- **Output:** draft features, one `createFeature` each.
+
+Follow *Phase 1 — Discover the feature set* over those repositories and every
+other connected source.
+
+Closing contract:
+
+- End the unit with a summary of what was drafted, and of which sources were skipped and why.
+- Never start the next stage unprompted.
+- Read the workspace before writing, so a re-sent or continued unit creates nothing twice.
+
+### Requirements stage
+
+Phases 2 and 3 for **one** feature, done in this conversation rather than by a
+sub-agent.
+
+- **Input:** one feature reference.
+- **Output:** that feature's requirements and their acceptance criteria. Publish
+  each requirement so its criteria reach the published set.
+
+Follow *Phases 2 & 3* for that feature alone, as the sub-agent brief describes
+it, without the report-back to an orchestrator. Raise any cross-feature question
+in your closing summary instead of acting on it.
+
+Closing contract:
+
+- End the unit with a summary of what was drafted, and of which sources were skipped and why.
+- Never start the next stage unprompted.
+- Read the workspace before writing, so a re-sent or continued unit creates nothing twice.
+
+### Designs stage
+
+Phase 4, across the requirements.
+
+- **Input:** the requirement references the run drafted.
+- **Output:** designs, with criteria coverage.
+
+Follow *Phase 4 — Design across the requirements* over those requirements, and
+link each design to the criteria it fulfils.
+
+Closing contract:
+
+- End the unit with a summary of what was drafted, and of which sources were skipped and why.
+- Never start the next stage unprompted.
+- Read the workspace before writing, so a re-sent or continued unit creates nothing twice.
+
 ---
 
 ## Follow-up tasks for unresolved ambiguity
