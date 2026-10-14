@@ -102,9 +102,14 @@ everything else hangs off.
    `**Sources:**` list linking the files/docs that evidence it). Check
    `listProjects` and `listFeatures` / `listProjectFeatures` first to avoid
    duplicating an existing home — a partial import of the same system may already be there.
+4. **Link each feature to its repository as you create it.** Call
+   `listGitHubConnections` once to map the repositories you surveyed to their
+   `github_repo_id`s, then `linkEntityRepository` every feature to each
+   repository its evidence lives in (see *Link every entity to its repository*).
 
 Capture the returned `featureRef` for every feature — those are the fan-out
-work items for Phase 2.
+work items for Phase 2 — along with the `github_repo_id` of each repository
+behind it, which its sub-agent needs to link what it creates.
 
 ## Phases 2 & 3 — Fan out: requirements, then acceptance criteria (sub-agents)
 
@@ -117,12 +122,14 @@ references themselves are server-generated and unique across the whole org, so
 nothing depends on the fan-out to keep them apart.
 
 Give each sub-agent enough to work independently: the feature's `reference`,
-title and body; the sources that back it; the pointer to load `spexd-authoring`
+title and body; the sources that back it; the `github_repo_id` of each
+repository those sources live in; the pointer to load `spexd-authoring`
 for altitude; and the two rules above. A prompt template:
 
 > You are importing one feature of an existing project into Spexd. **First load
 > the `spexd-authoring` skill and apply its altitude rules.** Feature:
-> `<featureRef>` — "<title>". Its evidence: `<files/docs/routes>`.
+> `<featureRef>` — "<title>". Its evidence: `<files/docs/routes>`. Its
+> repositories: `<fullName> (github_repo_id <id>)`, one per repository.
 >
 > **Step A — Requirements.** Read the code and docs behind this feature and
 > derive the behavioural rules it must uphold — what must be *true* within the
@@ -131,7 +138,9 @@ for altitude; and the two rules above. A prompt template:
 > show. For each, `createRequirement` under `<featureRef>` with a product-level
 > body and a closing `**Sources:**` list. Keep mechanism out (no vendors, tables,
 > algorithms, or code — those wait for Design). Check `listDescendants` on
-> `<featureRef>` first to avoid duplicates.
+> `<featureRef>` first to avoid duplicates. As you create each requirement,
+> `linkEntityRepository` it to every repository its evidence lives in, from the
+> list above.
 >
 > **Step B — Acceptance criteria.** For each requirement you created, write the
 > acceptance criteria that would prove it — atomic Given/When/Then scenarios,
@@ -201,7 +210,7 @@ Split along **architectural seams**, not one-per-requirement by reflex.
    architecture the code doesn't support; where the code is silent on something
    an AC needs, note the gap rather than fabricating a mechanism.
    `linkEntityRepository` each design to the repository (or repositories) its
-   seam lives in.
+   seam lives in, as you create it.
 3. **Link designs to the ACs they fulfil**, so each requirement's acceptance
    criteria are covered by at least one design. The cheapest route is
    `createDesign`'s `acceptanceCriteriaRefs`, which records coverage as the
@@ -407,24 +416,33 @@ with one search. The body carries:
   file — mint a ticket with the file's size and SHA-256, POST the bytes with the
   `curl` command it returns, then embed the resulting URL in the design's
   markdown. Never inline the bytes or read the file into context.
-- **Link the repository you imported from.** `listGitHubConnections` lists the
-  repositories connected to the org, and `linkEntityRepository` attaches one to
-  a feature (or any entity) by its `github_repo_id` — so a reviewer of the
-  import can see which codebase each feature was reverse-engineered from.
-  Designs get this too, and it is not optional there: link every repository a
-  design's seam spans. Entities above a task accumulate repositories; an
-  implementation task carries exactly one. A follow-up task carries **none**:
-  resolving it is an edit to the specification, not a change to code.
+- **Link every entity to its repository.** Every feature, requirement and
+  design an import raises is linked, as it is created, to each GitHub
+  repository its evidence came from — so a reviewer can see which codebase it
+  was reverse-engineered from, and the designs and tasks that follow inherit an
+  obvious place to work. `listGitHubConnections` lists the repositories
+  connected to the org, and `linkEntityRepository` attaches one by its
+  `github_repo_id`; `listEntityRepositories` reads back what an entity carries.
+  For a design this means every repository its seam spans. Entities above a
+  task accumulate repositories, so link each one that applies. The only
+  exceptions:
+  - **The repository isn't known.** Where an entity rests only on sources
+    outside any repository (docs, tickets), or its repository is not among
+    `listGitHubConnections`, link nothing rather than guessing, and name the
+    unconnected repository in the closing report so a person can connect it.
+  - **A follow-up task carries none**: resolving it is an edit to the
+    specification, not a change to code.
 
 ## Process checklist
 
 1. **Survey** all supplied sources (repo + docs + tickets); build a complete map
    of what the system does.
 2. **Discover** the feature set from evidence; `createProject`; `createFeature`
-   for each capability linked into the project. Capture every `featureRef`.
+   for each capability linked into the project, and link each feature to its
+   repositories. Capture every `featureRef`.
 3. **Fan out** one sub-agent per feature (concurrently). Each: derive grounded
-   **requirements**, then judgement-based **acceptance criteria**, created under
-   its feature.
+   **requirements**, linked to their repositories, then judgement-based
+   **acceptance criteria**, created under its feature.
 4. **Reconcile** the sub-agents' reports; place any cross-feature rules; collect
    the architectural-seam notes. Reconcile the follow-ups too: where sub-agents
    reported the same cross-feature question, raise it as **one** task, placed by
@@ -442,6 +460,8 @@ with one search. The body carries:
    `TASK`s beneath any feature are follow-ups — each `DRAFT`, each under the
    entity it concerns, each titled `Resolve ambiguous … from Spexd import`.
    `listInbox` with `view: "drafts"` is the fastest whole-org check that nothing
-   escaped `DRAFT`. Report the project and references created for human review,
+   escaped `DRAFT`. Check each feature, requirement and design carries its
+   repositories (`listEntityRepositories`), and link any that were missed.
+   Report the project and references created for human review,
    each as a link on its `viewUrl`, and list the follow-up tasks separately, also
    as links, so the reviewer has the open questions as one list to work through.
