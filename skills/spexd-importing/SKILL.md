@@ -290,6 +290,11 @@ Follow *Phases 2 & 3* for that feature alone, as the sub-agent brief describes
 it, without the report-back to an orchestrator. Raise any cross-feature question
 in your closing summary instead of acting on it.
 
+Other features' requirements units are drafting at the same moment, each in its
+own conversation. Before creating a requirement, search the workspace
+(`searchEntities`) for one a sibling unit has already drafted for the same rule,
+and build on it rather than drafting a second.
+
 Closing contract:
 
 - End the unit with a summary of what was drafted, and of which sources were skipped and why.
@@ -298,13 +303,24 @@ Closing contract:
 
 ### Designs stage
 
-Phase 4, across the requirements.
+Phase 4 for **one** feature's requirements, done in this conversation.
 
-- **Input:** the requirement references the run drafted.
-- **Output:** designs, with criteria coverage.
+- **Input:** the references the prompt names: one feature and the requirements
+  to design for.
+- **Output:** designs for those requirements and no others, with criteria
+  coverage.
 
 Follow *Phase 4 — Design across the requirements* over those requirements, and
-link each design to the criteria it fulfils.
+link each design to the criteria it fulfils. Leave a requirement the prompt
+does not name to the unit that names it.
+
+Other features' designs units are drafting at the same moment, each in its own
+conversation. Before creating a design, search the workspace (`searchEntities`)
+for one a sibling unit has already drafted for the same mechanism, and build on
+it rather than drafting a second account of it. A design still fulfils only its
+own requirement's criteria, so a mechanism shared across requirements is a
+design under each requirement it serves, consistent with the one already
+drafted.
 
 Closing contract:
 
