@@ -185,7 +185,15 @@ design under **each** of them, not one design linked across all of them. Design
 still happens **after** the fan-out, with a view of the whole chain — that view
 is what tells you a seam recurs, and keeps the sibling designs describing one
 mechanism consistently rather than three agents inventing three accounts of it.
-Split along **architectural seams**, not one-per-requirement by reflex.
+Split along **architectural seams**, not one-per-requirement by reflex — but
+seams decide how *many* designs a requirement gets, never *whether* it gets one.
+
+**Every requirement gets at least one design.** A requirement with no design is
+a gap in the chain a reviewer cannot see, not a judgement they can review. Thin
+evidence, a requirement that sits on no obvious seam, or a mechanism a sibling
+already described under another requirement are never reasons to leave one out:
+each still gets a design of its own, saying what the code does show and where it
+falls short.
 
 1. **Re-read the real architecture** — this is where you *do* name the actual
    stack, because Design is where detail belongs and because an import must
@@ -208,7 +216,10 @@ Split along **architectural seams**, not one-per-requirement by reflex.
    entity**, and express schemas and payloads as tables rather than as dumps —
    a design is read by product members as well as engineers. Do **not** invent
    architecture the code doesn't support; where the code is silent on something
-   an AC needs, note the gap rather than fabricating a mechanism.
+   an AC needs, note the gap rather than fabricating a mechanism. Where the code
+   is silent on the **whole** requirement, the design still exists: it states
+   that no implementation was found, names where you looked, and raises a
+   follow-up beneath it by *Follow-up tasks for unresolved ambiguity*.
    `linkEntityRepository` each design to the repository (or repositories) its
    seam lives in, as you create it.
 3. **Link designs to the ACs they fulfil**, so each requirement's acceptance
@@ -217,19 +228,29 @@ Split along **architectural seams**, not one-per-requirement by reflex.
    design is created; afterwards it's `addDesignCoverage` (one criterion, by
    `requirementRef` + `criterionRef`) or `replaceDesignCoverage` (the whole set
    at once). Coverage is a pure structural write — it rolls no version and
-   moves nothing in the chain. To confirm nothing is uncovered, page
-   `listAcceptanceCriteria` for each requirement and look for a criterion with
-   an empty `fulfilledBy`. (Decomposing designs into tasks is out of scope
+   moves nothing in the chain. (Decomposing designs into tasks is out of scope
    for an import — leave it to `spexd-authoring`/`spexd-implementing` once
    humans have reviewed. The only tasks an import raises are the follow-ups in
    *Follow-up tasks for unresolved ambiguity*, and a design you write here
    raises its own follow-ups by those rules.)
+4. **Check coverage at both levels before you stop.** Two checks, because
+   either alone passes on a gap:
+   - **Every requirement has a design.** `listDescendants(featureRef,
+     { maxDepth: -1 })` for each feature, and confirm every `REQ` is the
+     `parent` of at least one `DES`. Create the missing design rather than
+     reporting it.
+   - **Every criterion is covered.** Page `listAcceptanceCriteria` for each
+     requirement and look for a criterion with an empty `fulfilledBy`. That
+     read answers the **published** set, so an empty list does not mean
+     "nothing to cover": read the requirement with `readDocument`, and if its
+     draft holds criteria, publish it (`publishDocument` then `confirmPublish`)
+     and link the designs to them.
 
 You may fan out this phase too (a sub-agent per architectural seam), but keep
 the *linking* coherent from the orchestrator so the many-to-many wiring is
 consistent.
 
-4. **Report the import complete.** Once every design is drafted, call
+5. **Report the import complete.** Once every design is drafted, call
    `reportImportComplete` once, with no arguments.
    - It records that this organization has imported, which is what completes
      Spexd's setup import step. It drafts nothing and approves nothing.
@@ -307,8 +328,8 @@ Phase 4 for **one** feature's requirements, done in this conversation.
 
 - **Input:** the references the prompt names: one feature and the requirements
   to design for.
-- **Output:** designs for those requirements and no others, with criteria
-  coverage.
+- **Output:** at least one design under **every** requirement the prompt
+  names, and designs for no others, with criteria coverage.
 
 Follow *Phase 4 — Design across the requirements* over those requirements, and
 link each design to the criteria it fulfils. Leave a requirement the prompt
@@ -316,14 +337,17 @@ does not name to the unit that names it.
 
 Other features' designs units are drafting at the same moment, each in its own
 conversation. Before creating a design, search the workspace (`searchEntities`)
-for one a sibling unit has already drafted for the same mechanism, and build on
-it rather than drafting a second account of it. A design still fulfils only its
-own requirement's criteria, so a mechanism shared across requirements is a
-design under each requirement it serves, consistent with the one already
-drafted.
+for one a sibling unit has already drafted for the same mechanism, and use it as
+the account to stay consistent with — it is never a substitute. A design
+still fulfils only its own requirement's criteria, so a mechanism shared across
+requirements is a design under each requirement it serves, consistent with the
+one already drafted.
 
 Closing contract:
 
+- Before ending, run Phase 4's coverage check over the requirements the prompt
+  names: each is the parent of at least one design, and each of its published
+  criteria has a design in `fulfilledBy`. Close any gap before you stop.
 - End the unit with a summary of what was drafted, and of which sources were skipped and why.
 - Never start the next stage unprompted.
 - Read the workspace before writing, so a re-sent or continued unit creates nothing twice.
@@ -391,7 +415,9 @@ with one search. The body carries:
 - **Grounding beats completeness.** A smaller set of well-evidenced entities is
   a better import than a sprawling one padded with guesses. If evidence is thin
   for a candidate, say so in the body or leave it out — don't manufacture
-  detail to fill the shape. Where the point is one a reviewer cannot accept the
+  detail to fill the shape. This decides which features and requirements are
+  created; it never excuses a created requirement from having a design (see
+  *Phase 4*). Where the point is one a reviewer cannot accept the
   entity without answering, also raise a follow-up task for it (see
   *Follow-up tasks for unresolved ambiguity*).
 - **Everything DRAFT, no transitions.** Reiterated because it's easy to slip:
@@ -464,8 +490,10 @@ with one search. The body carries:
    reported the same cross-feature question, raise it as **one** task, placed by
    the follow-up rules.
 5. **Design** across the requirements along architectural seams, grounded in the
-   real codebase; link each design to the ACs it fulfils; confirm every AC is
-   covered. Raise a follow-up under any design the evidence leaves open.
+   real codebase, with at least one design under every requirement; link each
+   design to the ACs it fulfils; confirm every requirement has a design and
+   every AC is covered. Raise a follow-up under any design the evidence leaves
+   open.
 6. **Verify** the chain: `listProjectFeatures`, then one
    `listDescendants(FEAT-n, { maxDepth: -1 })` per feature — every requirement
    and design beneath it, each carrying its `parent` (acceptance criteria are
