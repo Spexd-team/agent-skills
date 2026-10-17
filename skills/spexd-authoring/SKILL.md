@@ -314,6 +314,36 @@ absent because it doesn't apply, not because nobody thought about it.
   `createAttachmentUpload` (see *Operational notes*) and embed the returned
   URL. Either beats ASCII art.
 
+**UI designs carry their mockups.** When a design includes UI — a new screen,
+a changed flow, a component with visible states — the visual design is part of
+the spec, and the design must carry it rather than describe it in prose alone:
+
+- **Link the frame.** Wherever a Figma (or other design tool) file exists, link
+  the **specific frame or node** for each screen or state the design covers —
+  a Figma URL with its `node-id`, not the file's top-level link — so an
+  implementer lands on the exact artboard. One link per screen or state,
+  labelled with what it shows.
+- **Embed screenshots.** Where mockups exist, include an image of each one in
+  the body, next to the prose it illustrates. Export it from the design tool
+  (with the Figma MCP, `get_screenshot` on the frame's node), upload it with
+  `createAttachmentUpload` (see *Operational notes*) and embed the returned
+  URL. The screenshot is what a reader sees without leaving Spexd; the frame
+  link is the source of truth an implementer inspects for spacing, tokens and
+  assets. Give both — a screenshot without a link can't be inspected, and a
+  link without a screenshot hides the design from anyone without tool access.
+- **Ask before you write.** When a user has asked you to author a design that
+  includes UI, **ask whether mockups exist** before writing it, in the same
+  batch as your other questions (see *Process*). If they do, get the links. If
+  they don't and you have access to a design tool (a Figma MCP, for instance),
+  **offer to mock the screens up first** — following the product's existing
+  design system — so the design can reference them; author without mockups
+  only if the user declines. Without a design tool, say the design has none and
+  describe layout and states in prose, so the gap is visible rather than
+  silent.
+
+A mockup doesn't replace the rest of the design: the system beneath the screen
+still needs its mechanism, data model and contracts.
+
 **Keep out — four things that creep into designs and don't belong.**
 
 - **The implementation code.** A design commissions code; it doesn't contain
@@ -408,6 +438,16 @@ verifying and understanding the existing code. Cover:
   *Ride request creation & state machine*"), and the acceptance criteria it
   contributes to, linked in the `[AC-3](…/e/REQ-4?ac=AC-3)` form. Reference
   them; don't restate them in full.
+- **Mockups, for any UI change.** When the task changes UI and its parent
+  design carries mockups, the task references **the specific ones** it
+  implements — each frame link (and its screenshot, re-embedded from the
+  design's attachment URL) for the screens and states this task touches, not
+  a pointer to the design's mockups in general. Then instruct the implementer
+  plainly: *build to these mockups as closely as possible; don't invent new
+  layouts, components or copy, and don't depart from the mockups without
+  asking.* Where the mockups don't cover something the task needs — an empty
+  state, an error message, a breakpoint — say so in the task, so the gap is
+  known before work starts rather than improvised during it.
 
 **Keep out.** Don't re-argue the design; reference it. Don't introduce
 architecture that isn't already in the design. And **no implementation code** —
@@ -769,6 +809,9 @@ the task exists to commission is not.
    Research surfaces gaps the sources don't close — keep a list of them and
    **put them to the user in one batch before you start writing**, so the
    answers land in the entities as decisions instead of as open questions.
+   **If any design includes UI, ask whether mockups exist** in that batch, and
+   offer to mock them up first if they don't and you have a design tool (see
+   *UI designs carry their mockups* under Design).
    **Before any design or task, read the code as well.** Both levels are bound
    by code analysis: find the modules and layers the capability will live in,
    and learn the approach the codebase already takes there, so the design

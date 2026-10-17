@@ -167,6 +167,17 @@ building: an anchored discussion on the design is often where a caveat that
 never made it into the body lives. Pull the ones that look relevant with
 `getCommentThreads`.
 
+**Collect the visual design for any UI work.** If the task touches UI, gather
+every design asset the chain carries — Figma (or other design tool) frame
+links and embedded mockup screenshots — from the **task, its design, its
+requirement and its feature**. The task should name the specific frames it
+implements, but don't stop there if it doesn't: a design or requirement often
+carries mockups the task never repeated. Open each one: with the Figma MCP,
+`get_design_context` and `get_screenshot` on the linked node give you the
+layout, tokens and assets to build from; a screenshot embedded in a body is an
+image URL you can view directly. These are part of your spec, alongside the
+prose.
+
 Read enough of the chain that you could explain *why* the task exists and *how*
 it's meant to work before touching code.
 
@@ -248,6 +259,19 @@ after your session ends.
   tasks that must land first. Code in the entities is quoted evidence of what
   already exists, not a draft to paste. Writing the implementation is your job,
   in the repository's own idiom and along the grain the design describes.
+- **Build UI to the mockups.** Where the task, its design or its requirement
+  carries design-tool frames or screenshots, implement **as closely to them as
+  possible** — layout, spacing, hierarchy, states and the exact copy shown —
+  using the repository's existing components and design tokens to get there.
+  Don't invent new layouts, components or copy, and don't "improve" on the
+  mockups. Departing from them is acceptable only where they **don't cover**
+  what you need (a state, breakpoint or message they never show); then fill the
+  gap in the mockups' own visual language and the product's existing copy
+  conventions, and list every such gap-fill in the PR description so a
+  reviewer can check it. A gap bigger than a detail — a whole screen or flow
+  the mockups don't show — is a design gap: ask, as below, rather than
+  designing it yourself. If a mockup conflicts with the design's prose or an
+  acceptance criterion, flag it rather than picking one.
 - **Write code that explains itself, and comment only what it can't.** Names,
   types and small well-cut functions carry the explanation; a comment restating
   what the line below it does is noise, and it goes stale the first time
@@ -512,7 +536,8 @@ raise the design problem the way step 5 of the loop describes.
    any plan or code.
 3. Read the full ancestor chain (design → ACs → requirement → feature) before
    coding — one batched `readDocument` for the bodies, `getDesignCoverage` for
-   the exact AC set you owe.
+   the exact AC set you owe. For UI work, collect every design-tool frame
+   and mockup screenshot from the task, design, requirement and feature.
 4. Run the pre-start check: the task is `APPROVED` and not already started, with nothing on
    its `**Depends on:**` line outstanding; no open comment thread bears on it;
    the task still meets its parent design. Report it — if anything is flagged,
@@ -523,7 +548,9 @@ raise the design problem the way step 5 of the loop describes.
 6. Implement to the design and the task's definition of done; let the code
    explain itself and keep comments to file-level and genuinely ambiguous
    points; write the tests it names, annotate each with the `REQ-x/AC-y` it
-   proves, cover the regressions it calls out, and satisfy every AC.
+   proves, cover the regressions it calls out, and satisfy every AC. Build UI
+   as close to its mockups as possible, inventing no design or copy they
+   already cover, and list any gap you had to fill in the PR.
 7. Raise the PR, titled `{reference}: {title}` (e.g. `TASK-12: Implement POST
    /api/rides`) and naming that one task only; confirm the task reached
    `PR_RAISED` (or transition it); link the task, its design and any other
