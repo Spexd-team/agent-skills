@@ -188,8 +188,9 @@ model for real authoring.)
 
 **What it is.** A single testable condition that defines when its requirement
 is satisfied. One AC = one scenario. The house style is **Given / When /
-Then**: `**Given** <precondition>, **when** <action>, **then** <observable
-outcome>.` Belongs to exactly one requirement.
+Then / Because**: `**Given** <precondition>, **when** <action>, **then**
+<observable outcome>`, and *because* — where the criterion comes from.
+Belongs to exactly one requirement.
 
 **AC vs Requirement.** An AC is concrete and verifiable where the requirement
 is general. If you cannot derive a pass/fail test from the sentence — because
@@ -207,6 +208,55 @@ action, one outcome. Split any "and also…" into a second AC. Cover the golden
 path *and* the important failure/edge paths as **separate** criteria (valid
 request; no location permission; no payment method; each its own AC). Prefer
 measurable outcomes over adjectives ("within 30 seconds", not "quickly").
+
+**Because: where a criterion comes from.** Because is one origin from a fixed
+set, plus any evidence behind it. The origins, by the key the tools take:
+
+| Origin | Key | Meaning |
+|---|---|---|
+| Regulatory or legal | `regulatory_or_legal` | Required by a law, regulation or standard |
+| Contractual | `contractual` | Committed to a customer or partner |
+| Business constraint | `business_constraint` | A policy or commercial rule of the business |
+| Product or UX decision | `product_or_ux_decision` | A choice about how the product should behave |
+| Technical constraint | `technical_constraint` | Imposed by a platform, dependency or system limit |
+| Edge case | `edge_case` | An unusual case of another criterion |
+| Negation | `negation` | The opposite case of another criterion |
+
+**Record an origin only when a source states it** — the user, a ticket, a
+document, the code. Set `because.origin` on `createAcceptanceCriterion` or
+`updateAcceptanceCriterion` to its key. When no source names one, omit
+`origin` and the criterion reads **Not stated**. Not stated is the honest
+default, never a gap to fill: don't infer an origin from the criterion's
+wording or guess one to complete the record. Changing a recorded origin
+follows the same rule, and `origin: null` clears one a source has withdrawn.
+
+**Record the evidence behind it.** A link is
+`because.addEvidence: [{ kind: "link", url, label? }]`. A file is uploaded
+first — `createAttachmentUpload`, then the command it returns — and attached
+by the upload's `id` as `{ kind: "file", attachmentId }`; never read the file
+into context. Put the origin and its evidence in the same write: the
+criterion's create, or one update. Evidence needs no origin, so a source that
+backs a criterion without saying why it exists is still worth attaching.
+Remove an item with `updateAcceptanceCriterion`'s `because.removeEvidence: [id]`,
+taking the id from the write response that returned it rather than
+re-listing. A criterion holds at most 20 items.
+
+**Read Because before changing a criterion.** Every criteria read
+(`listAcceptanceCriteria`, `getRequirementCriteria`, and `readDocument`'s
+`criteria` on a requirement) carries `because` on every criterion: `origin`
+as a key or `null` for not stated, and `evidence` as items with an `id`, a
+`url` and a `label`. Before proposing to change or drop a criterion, read
+its Because. An origin outside the team — Regulatory or legal, Contractual —
+means the wording answers to someone the specification doesn't speak for:
+name the origin and its evidence to the user and confirm before proposing the
+change.
+That is your practice, not a product rule; Spexd records the origin and does
+not warn on or block a change.
+
+**Because is part of the draft.** A Because change is a draft edit to the
+requirement, like the criterion's wording, and reaches a version when the
+requirement is published. Write every criterion — Because included — then
+publish the requirement once.
 
 **Keep out.** Mechanism and implementation. Thresholds yes; techniques no.
 
@@ -687,7 +737,9 @@ the task exists to commission is not.
   cascades to nothing and invalidates no approval. A create answers with the
   criterion it wrote, numbered `AC-n` — read the new reference from that
   response; don't re-list the requirement's criteria and match on title. A
-  frozen requirement refuses the write with a 409.
+  frozen requirement refuses the write with a 409. The create and the update
+  also carry a criterion's `because` (origin and evidence, *Acceptance
+  Criteria*), where an upload's `id` attaches a file as evidence.
   - **The criteria reach a version when the requirement is published.** Write
     all of them first, then publish the requirement once (`publishDocument`,
     then `confirmPublish`). That version carries the body and the criteria as
@@ -771,7 +823,8 @@ the task exists to commission is not.
   command it hands back — never read the file into context or inline it as
   base64. Embed the returned absolute URL in the markdown (`![alt](url)` for an
   image, `[label](url)` otherwise). Tickets are single-use; mint a fresh one to
-  retry.
+  retry. The upload also returns an `id`, which attaches the file as a
+  criterion's evidence (`because.addEvidence: [{ kind: "file", attachmentId }]`).
 - **Comments are how you talk about an entity without editing it.** Start a
   thread with `createCommentThread` — anchored by `quotedText` (an exact span
   occurring exactly once) or document-level when omitted — and reply with
